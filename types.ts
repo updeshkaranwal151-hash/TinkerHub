@@ -1,4 +1,3 @@
-
 export enum Category {
   MICROCONTROLLER = 'Microcontroller',
   SENSOR = 'Sensor',
@@ -15,7 +14,7 @@ export interface IssueRecord {
 }
 
 export interface Component {
-  id: string;
+  id:string;
   name: string;
   description: string;
   category: Category;
@@ -23,4 +22,5 @@ export interface Component {
   issuedTo: IssueRecord[];
   imageUrl?: string;
   isAvailable: boolean;
+  createdAt?: string; 
 }

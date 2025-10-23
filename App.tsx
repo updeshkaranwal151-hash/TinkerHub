@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Component, IssueRecord } from './types';
 import { Category } from './types';
 import Header from './components/Header';
@@ -6,12 +6,18 @@ import ComponentCard from './components/ComponentCard';
 import AddComponentModal from './components/AddComponentModal';
 import EditComponentModal from './components/EditComponentModal';
 import IssueComponentModal from './components/IssueComponentModal';
-import { PlusIcon, SearchIcon } from './components/Icons';
+import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon } from './components/Icons';
 import { generateDescription, generateImage } from './services/geminiService';
 import PasswordProtection from './components/PasswordProtection';
+import * as storageService from './services/localStorageService';
 
-const LOCAL_STORAGE_KEY = 'inventory_components';
+type SortKey = 'default' | 'name' | 'category' | 'availability';
+type SortDirection = 'ascending' | 'descending';
 
+interface SortConfig {
+  key: SortKey;
+  direction: SortDirection;
+}
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -21,50 +27,40 @@ const App: React.FC = () => {
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [componentToEdit, setComponentToEdit] = useState<Component | null>(null);
   const [componentToIssue, setComponentToIssue] = useState<Component | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'default', direction: 'ascending' });
 
-  // Load components from localStorage on first load
+  // Load components from LocalStorage on first load
   useEffect(() => {
+    if (isAuthenticated) {
+        const data = storageService.getComponents();
+        setComponents(data);
+    }
+  }, [isAuthenticated]);
+
+
+  const handleAddComponent = (newComponent: Omit<Component, 'id' | 'createdAt'>) => {
     try {
-      const savedComponentsJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedComponentsJSON) {
-        setComponents(JSON.parse(savedComponentsJSON));
-      } else {
-        // If nothing in storage, start with an empty list.
-        setComponents([]);
-      }
-    } catch (error) {
-        console.error("Failed to load components from storage. Starting fresh.", error);
-        setComponents([]); // In case of parsing error, also start fresh.
+        const addedComponent = storageService.addComponent(newComponent);
+        // Re-fetch and sort to maintain order
+        setComponents(storageService.getComponents());
+        setIsAddModalOpen(false);
+    } catch (err) {
+        alert("Error adding component. Please try again.");
+        console.error(err);
     }
-    setIsLoading(false);
-  }, []);
-
-  // Save components to localStorage whenever they change
-  useEffect(() => {
-    if (!isLoading) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(components));
-      } catch (error) {
-        console.error("Failed to save components to storage:", error);
-      }
-    }
-  }, [components, isLoading]);
-
-  const handleAddComponent = (newComponent: Omit<Component, 'id'>) => {
-    const componentToAdd: Component = {
-      ...newComponent,
-      id: new Date().toISOString(),
-    };
-    setComponents(prev => [componentToAdd, ...prev]);
-    setIsAddModalOpen(false);
   };
 
   const handleDeleteComponent = (id: string) => {
-    if(window.confirm('Are you sure you want to delete this component?')) {
-        setComponents(prev => prev.filter(c => c.id !== id));
+    if(window.confirm('Are you sure you want to delete this component? This action cannot be undone.')) {
+        try {
+            storageService.deleteComponent(id);
+            setComponents(prev => prev.filter(c => c.id !== id));
+        } catch (err) {
+            alert("Error deleting component. Please try again.");
+            console.error(err);
+        }
     }
   };
 
@@ -79,51 +75,104 @@ const App: React.FC = () => {
   };
 
   const handleUpdateComponent = (updatedComponent: Component) => {
-    setComponents(prev =>
-      prev.map(c => (c.id === updatedComponent.id ? updatedComponent : c))
-    );
-    setIsEditModalOpen(false);
-    setComponentToEdit(null);
+    try {
+        storageService.updateComponent(updatedComponent);
+        setComponents(prev =>
+            prev.map(c => (c.id === updatedComponent.id ? updatedComponent : c))
+        );
+        setIsEditModalOpen(false);
+        setComponentToEdit(null);
+    } catch (err) {
+        alert("Error updating component. Please try again.");
+        console.error(err);
+    }
   };
 
-  const handleToggleAvailability = (componentId: string) => {
-    setComponents(prev =>
-        prev.map(c =>
-            c.id === componentId ? { ...c, isAvailable: !c.isAvailable } : c
-        )
-    );
+  const handleToggleAvailability = (component: Component) => {
+    try {
+        const updatedComponent = storageService.toggleAvailability(component);
+        setComponents(prev =>
+            prev.map(c =>
+                c.id === component.id ? updatedComponent : c
+            )
+        );
+    } catch (err) {
+        alert("Error toggling availability. Please try again.");
+        console.error(err);
+    }
   };
 
   const handleConfirmIssue = (componentId: string, studentName: string) => {
-    const newIssue: IssueRecord = {
-        id: `issue-${new Date().getTime()}`,
-        studentName,
-        issuedDate: new Date().toISOString(),
-    };
-    setComponents(prev => 
-        prev.map(c => 
-            c.id === componentId ? { ...c, issuedTo: [...c.issuedTo, newIssue] } : c
-        )
-    );
-    setIsIssueModalOpen(false);
-    setComponentToIssue(null);
+    try {
+        const updatedComponent = storageService.issueComponent(componentId, studentName);
+         setComponents(prev => 
+            prev.map(c => 
+                c.id === componentId ? updatedComponent : c
+            )
+        );
+        setIsIssueModalOpen(false);
+        setComponentToIssue(null);
+    } catch (err) {
+        alert("Error issuing component. Please try again.");
+        console.error(err);
+    }
   };
 
   const handleReturnIssue = (componentId: string, issueId: string) => {
-    setComponents(prev =>
-        prev.map(c =>
-            c.id === componentId
-            ? { ...c, issuedTo: c.issuedTo.filter(issue => issue.id !== issueId) }
-            : c
-        )
-    );
+     try {
+        const updatedComponent = storageService.returnIssue(componentId, issueId);
+        setComponents(prev =>
+            prev.map(c =>
+                c.id === componentId ? updatedComponent : c
+            )
+        );
+    } catch (err) {
+        alert("Error returning component. Please try again.");
+        console.error(err);
+    }
   };
 
-  const filteredComponents = components.filter(component => {
+  const handleClearAllComponents = () => {
+    if (window.confirm('Are you sure you want to delete ALL components? This action cannot be undone.')) {
+        try {
+            storageService.clearAllComponents();
+            setComponents([]);
+        } catch (err) {
+            alert("Error clearing data. Please try again.");
+            console.error(err);
+        }
+    }
+  };
+
+  const filteredComponents = useMemo(() => components.filter(component => {
     const matchesSearch = component.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || component.category === categoryFilter;
     return matchesSearch && matchesCategory;
-  });
+  }), [components, searchQuery, categoryFilter]);
+
+  const sortedAndFilteredComponents = useMemo(() => {
+    let sortableItems = [...filteredComponents];
+    if (sortConfig.key !== 'default') {
+      sortableItems.sort((a, b) => {
+        switch (sortConfig.key) {
+          case 'name':
+            return a.name.localeCompare(b.name);
+          case 'category':
+            return a.category.localeCompare(b.category);
+          case 'availability':
+            const aAvailable = a.totalQuantity - a.issuedTo.length;
+            const bAvailable = b.totalQuantity - b.issuedTo.length;
+            return aAvailable - bAvailable;
+          default:
+            return 0;
+        }
+      });
+    }
+    if (sortConfig.direction === 'descending') {
+      sortableItems.reverse();
+    }
+    return sortableItems;
+  }, [filteredComponents, sortConfig]);
 
   const handleSuccessfulAuth = () => {
     setIsAuthenticated(true);
@@ -135,53 +184,70 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col">
-      <Header onAddComponent={() => setIsAddModalOpen(true)} />
+      <Header 
+        onAddComponent={() => setIsAddModalOpen(true)} 
+        onClearAll={handleClearAllComponents}
+      />
       
       <main className="container mx-auto p-4 md:p-8 flex-grow">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl md:text-3xl font-bold text-sky-400">Inventory Dashboard</h2>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 shadow-lg shadow-indigo-600/30"
-          >
-            <PlusIcon />
-            Add Component
-          </button>
         </div>
 
-        <div className="mb-6 flex flex-col md:flex-row gap-4">
-            <div className="relative flex-grow">
-                <input
-                    type="text"
-                    placeholder="Search by component name..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    aria-label="Search components"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <SearchIcon />
-                </div>
+        <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto flex-grow">
+              <div className="relative flex-grow">
+                  <input
+                      type="text"
+                      placeholder="Search by component name..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="w-full bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      aria-label="Search components"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <SearchIcon />
+                  </div>
+              </div>
+              <select
+                  value={categoryFilter}
+                  onChange={e => setCategoryFilter(e.target.value as Category | 'all')}
+                  className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  aria-label="Filter by category"
+              >
+                  <option value="all">All Categories</option>
+                  {Object.values(Category).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                  ))}
+              </select>
             </div>
-            <select
-                value={categoryFilter}
-                onChange={e => setCategoryFilter(e.target.value as Category | 'all')}
-                className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                aria-label="Filter by category"
-            >
-                <option value="all">All Categories</option>
-                {Object.values(Category).map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                ))}
-            </select>
+            <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end">
+                <select
+                    value={sortConfig.key}
+                    onChange={e => setSortConfig({ ...sortConfig, key: e.target.value as SortKey })}
+                    className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    aria-label="Sort by"
+                >
+                    <option value="default">Default Sort</option>
+                    <option value="name">Name</option>
+                    <option value="category">Category</option>
+                    <option value="availability">Availability</option>
+                </select>
+                <button
+                    onClick={() => setSortConfig({ ...sortConfig, direction: sortConfig.direction === 'ascending' ? 'descending' : 'ascending' })}
+                    disabled={sortConfig.key === 'default'}
+                    className="p-2 bg-slate-800 border border-slate-700 rounded-md shadow-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label={`Sort ${sortConfig.direction === 'ascending' ? 'descending' : 'ascending'}`}
+                >
+                    {sortConfig.direction === 'ascending' ? <ArrowUpIcon /> : <ArrowDownIcon />}
+                </button>
+            </div>
         </div>
         
-        {isLoading ? (
-          <p className="text-center text-lg">Loading components...</p>
-        ) : components.length > 0 ? (
-            filteredComponents.length > 0 ? (
+        {components.length > 0 ? (
+            sortedAndFilteredComponents.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredComponents.map(component => (
+                {sortedAndFilteredComponents.map(component => (
                     <ComponentCard
                     key={component.id}
                     component={component}

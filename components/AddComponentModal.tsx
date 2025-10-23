@@ -1,11 +1,11 @@
-
 import React, { useState } from 'react';
 import { Component } from '../types';
 import { Category } from '../types';
+import { componentLibrary } from './componentLibrary';
 
 interface AddComponentModalProps {
   onClose: () => void;
-  onAddComponent: (component: Omit<Component, 'id'>) => void;
+  onAddComponent: (component: Omit<Component, 'id' | 'createdAt'>) => void;
   generateDescription: (componentName: string) => Promise<string>;
   generateImage: (componentName: string) => Promise<string>;
 }
@@ -62,9 +62,9 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
     try {
       const generatedImageUrl = await generateImage(name);
       setImageUrl(generatedImageUrl);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating image:', error);
-      alert('Failed to generate image. Please try again or provide a URL manually.');
+      alert(error.message || 'Failed to generate image. Please try again or provide a URL manually.');
     } finally {
       setIsGeneratingImage(false);
     }
@@ -77,25 +77,38 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
         <h2 className="text-2xl font-bold mb-6 text-sky-400">Add New Component</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+            <label htmlFor="category" className="block text-sm font-medium text-slate-300">Category</label>
+            <select id="category" value={category} onChange={e => setCategory(e.target.value as Category)} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+              {Object.values(Category).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+          </div>
+          
+          <div>
             <label htmlFor="name" className="block text-sm font-medium text-slate-300">Component Name</label>
-            <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} required className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
+            <input 
+              type="text" 
+              id="name" 
+              value={name} 
+              onChange={e => setName(e.target.value)} 
+              required 
+              className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              list="component-suggestions"
+            />
+            <datalist id="component-suggestions">
+              {componentLibrary[category]?.map(componentName => (
+                <option key={componentName} value={componentName} />
+              ))}
+            </datalist>
           </div>
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-slate-300">Description</label>
             <div className="relative">
               <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={4} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
-              <button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="absolute bottom-2 right-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-2 rounded disabled:bg-slate-500">
+              <button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc || !name} className="absolute bottom-2 right-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-2 rounded disabled:bg-slate-500 disabled:cursor-not-allowed">
                 {isGeneratingDesc ? 'Generating...' : '✨ Auto-generate'}
               </button>
             </div>
-          </div>
-          
-          <div>
-            <label htmlFor="category" className="block text-sm font-medium text-slate-300">Category</label>
-            <select id="category" value={category} onChange={e => setCategory(e.target.value as Category)} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-              {Object.values(Category).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
           </div>
           
           <div>

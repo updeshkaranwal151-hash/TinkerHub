@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Component } from '../types';
+import { Component, IssueRecord } from '../types';
 import { EditIcon, MinusIcon, ReturnIcon, TrashIcon } from './Icons';
 
 interface ComponentCardProps {
@@ -9,7 +8,7 @@ interface ComponentCardProps {
   onReturnIssue: (componentId: string, issueId: string) => void;
   onDelete: (id: string) => void;
   onOpenEditModal: (component: Component) => void;
-  onToggleAvailability: (componentId: string) => void;
+  onToggleAvailability: (component: Component) => void;
 }
 
 const ComponentCard: React.FC<ComponentCardProps> = ({ component, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability }) => {
@@ -75,7 +74,7 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, onOpenIssueMod
                     <EditIcon /> Edit
                 </button>
                 <button
-                    onClick={() => onToggleAvailability(component.id)}
+                    onClick={() => onToggleAvailability(component)}
                     className={`flex-1 flex items-center justify-center gap-1 text-sm ${isAvailable ? 'bg-red-800 hover:bg-red-900' : 'bg-green-600 hover:bg-green-700'} text-white font-semibold py-2 px-3 rounded-lg transition duration-200`}
                 >
                     {isAvailable ? 'Not Available' : 'Make Available'}
