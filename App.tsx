@@ -9,7 +9,7 @@ import IssueComponentModal from './components/IssueComponentModal';
 import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon } from './components/Icons';
 import { generateDescription, generateImage } from './services/geminiService';
 import PasswordProtection from './components/PasswordProtection';
-import * as storageService from './services/localStorageService';
+import * as localStorageService from './services/localStorageService';
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
 type SortDirection = 'ascending' | 'descending';
@@ -22,6 +22,7 @@ interface SortConfig {
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [components, setComponents] = useState<Component[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
@@ -34,17 +35,24 @@ const App: React.FC = () => {
   // Load components from LocalStorage on first load
   useEffect(() => {
     if (isAuthenticated) {
-        const data = storageService.getComponents();
-        setComponents(data);
+        setIsLoading(true);
+        try {
+            const data = localStorageService.getComponents();
+            setComponents(data);
+        } catch (err) {
+            console.error("Error fetching components:", err);
+            alert("Could not load inventory data from local storage.");
+        } finally {
+            setIsLoading(false);
+        }
     }
   }, [isAuthenticated]);
 
 
   const handleAddComponent = (newComponent: Omit<Component, 'id' | 'createdAt'>) => {
     try {
-        const addedComponent = storageService.addComponent(newComponent);
-        // Re-fetch and sort to maintain order
-        setComponents(storageService.getComponents());
+        const addedComponent = localStorageService.addComponent(newComponent);
+        setComponents(prev => [addedComponent, ...prev]);
         setIsAddModalOpen(false);
     } catch (err) {
         alert("Error adding component. Please try again.");
@@ -55,7 +63,7 @@ const App: React.FC = () => {
   const handleDeleteComponent = (id: string) => {
     if(window.confirm('Are you sure you want to delete this component? This action cannot be undone.')) {
         try {
-            storageService.deleteComponent(id);
+            localStorageService.deleteComponent(id);
             setComponents(prev => prev.filter(c => c.id !== id));
         } catch (err) {
             alert("Error deleting component. Please try again.");
@@ -76,7 +84,7 @@ const App: React.FC = () => {
 
   const handleUpdateComponent = (updatedComponent: Component) => {
     try {
-        storageService.updateComponent(updatedComponent);
+        localStorageService.updateComponent(updatedComponent);
         setComponents(prev =>
             prev.map(c => (c.id === updatedComponent.id ? updatedComponent : c))
         );
@@ -90,7 +98,7 @@ const App: React.FC = () => {
 
   const handleToggleAvailability = (component: Component) => {
     try {
-        const updatedComponent = storageService.toggleAvailability(component);
+        const updatedComponent = localStorageService.toggleAvailability(component);
         setComponents(prev =>
             prev.map(c =>
                 c.id === component.id ? updatedComponent : c
@@ -104,7 +112,7 @@ const App: React.FC = () => {
 
   const handleConfirmIssue = (componentId: string, studentName: string) => {
     try {
-        const updatedComponent = storageService.issueComponent(componentId, studentName);
+        const updatedComponent = localStorageService.issueComponent(componentId, studentName);
          setComponents(prev => 
             prev.map(c => 
                 c.id === componentId ? updatedComponent : c
@@ -120,7 +128,7 @@ const App: React.FC = () => {
 
   const handleReturnIssue = (componentId: string, issueId: string) => {
      try {
-        const updatedComponent = storageService.returnIssue(componentId, issueId);
+        const updatedComponent = localStorageService.returnIssue(componentId, issueId);
         setComponents(prev =>
             prev.map(c =>
                 c.id === componentId ? updatedComponent : c
@@ -134,12 +142,15 @@ const App: React.FC = () => {
 
   const handleClearAllComponents = () => {
     if (window.confirm('Are you sure you want to delete ALL components? This action cannot be undone.')) {
+        setIsLoading(true);
         try {
-            storageService.clearAllComponents();
+            localStorageService.clearAllComponents();
             setComponents([]);
         } catch (err) {
             alert("Error clearing data. Please try again.");
             console.error(err);
+        } finally {
+            setIsLoading(false);
         }
     }
   };
@@ -244,7 +255,12 @@ const App: React.FC = () => {
             </div>
         </div>
         
-        {components.length > 0 ? (
+        {isLoading ? (
+             <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
+                <h3 className="text-xl font-semibold text-slate-300 animate-pulse">Loading Inventory...</h3>
+                <p className="text-slate-500 mt-2">Please wait while we fetch the data.</p>
+            </div>
+        ) : components.length > 0 ? (
             sortedAndFilteredComponents.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {sortedAndFilteredComponents.map(component => (

@@ -80,6 +80,17 @@ export const deleteComponent = async (id: string): Promise<void> => {
     await deleteDoc(componentDoc);
 };
 
+export const clearAllComponents = async (): Promise<void> => {
+    const q = query(componentsCollectionRef);
+    const querySnapshot = await getDocs(q);
+    const deletePromises: Promise<void>[] = [];
+    querySnapshot.forEach((docSnapshot) => {
+        deletePromises.push(deleteDoc(doc(db, 'components', docSnapshot.id)));
+    });
+    await Promise.all(deletePromises);
+};
+
+
 export const toggleAvailability = async (component: Component): Promise<Component> => {
     const componentDocRef = doc(db, 'components', component.id);
     const newAvailability = !component.isAvailable;
