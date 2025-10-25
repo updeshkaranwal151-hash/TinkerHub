@@ -56,9 +56,9 @@ const EditComponentModal: React.FC<EditComponentModalProps> = ({ onClose, onUpda
     try {
       const generatedDesc = await generateDescription(name);
       setDescription(generatedDesc);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating description:', error);
-      alert('Failed to generate description. Please try again.');
+      alert(error.message || 'Failed to generate description. Please try again.');
     } finally {
       setIsGeneratingDesc(false);
     }
@@ -135,9 +135,10 @@ const EditComponentModal: React.FC<EditComponentModalProps> = ({ onClose, onUpda
                   {isGeneratingImage ? 'Generating...' : 'Gen Image'}
                 </button>
             </div>
+            {isGeneratingImage && <p className="text-xs text-slate-400 mt-2 text-center animate-pulse">AI image generation can take up to 30 seconds. Please be patient.</p>}
           </div>
           
-          {imageUrl && (
+          {imageUrl && !isGeneratingImage && (
             <div className="mt-4">
               <p className="block text-sm font-medium text-slate-300 mb-2">Image Preview</p>
               <img src={imageUrl} alt="Component Preview" className="rounded-lg w-full h-auto max-h-48 object-contain bg-slate-700"/>

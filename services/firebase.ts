@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -14,5 +14,15 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Initialize Firestore with settings to improve connection stability.
+// Forcing long polling and disabling fetch streams can prevent transport
+// errors in environments with unstable WebSocket or streaming support.
+initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
+});
+
+
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
