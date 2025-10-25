@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Component } from '../types';
-import { Category } from '../types';
-import { componentLibrary } from './componentLibrary';
+import { Component, Category } from '../types.ts';
+import { componentLibrary } from './componentLibrary.ts';
 
 interface EditComponentModalProps {
   onClose: () => void;

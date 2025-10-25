@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Component, IssueRecord } from './types';
-import { Category } from './types';
-import Header from './components/Header';
-import ComponentCard from './components/ComponentCard';
-import AddComponentModal from './components/AddComponentModal';
-import EditComponentModal from './components/EditComponentModal';
-import IssueComponentModal from './components/IssueComponentModal';
-import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon } from './components/Icons';
-import { generateDescription, generateImage } from './services/geminiService';
-import PasswordProtection from './components/PasswordProtection';
-import * as localStorageService from './services/localStorageService';
+import { Component, IssueRecord, Category } from './types.ts';
+import Header from './components/Header.tsx';
+import ComponentCard from './components/ComponentCard.tsx';
+import AddComponentModal from './components/AddComponentModal.tsx';
+import EditComponentModal from './components/EditComponentModal.tsx';
+import IssueComponentModal from './components/IssueComponentModal.tsx';
+import ShareModal from './components/ShareModal.tsx';
+import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon } from './components/Icons.tsx';
+import { generateDescription, generateImage } from './services/geminiService.ts';
+import PasswordProtection from './components/PasswordProtection.tsx';
+import * as localStorageService from './services/localStorageService.ts';
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
 type SortDirection = 'ascending' | 'descending';
@@ -26,6 +26,7 @@ const App: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [componentToEdit, setComponentToEdit] = useState<Component | null>(null);
   const [componentToIssue, setComponentToIssue] = useState<Component | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -198,6 +199,7 @@ const App: React.FC = () => {
       <Header 
         onAddComponent={() => setIsAddModalOpen(true)} 
         onClearAll={handleClearAllComponents}
+        onOpenShareModal={() => setIsShareModalOpen(true)}
       />
       
       <main className="container mx-auto p-4 md:p-8 flex-grow">
@@ -324,6 +326,10 @@ const App: React.FC = () => {
           onClose={() => setIsIssueModalOpen(false)}
           onIssue={handleConfirmIssue}
         />
+      )}
+
+      {isShareModalOpen && (
+        <ShareModal onClose={() => setIsShareModalOpen(false)} />
       )}
 
       <footer className="text-center text-slate-500 text-sm py-4 border-t border-slate-800">

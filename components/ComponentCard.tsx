@@ -1,6 +1,6 @@
 import React from 'react';
-import { Component, IssueRecord } from '../types';
-import { EditIcon, MinusIcon, ReturnIcon, TrashIcon } from './Icons';
+import { Component, IssueRecord } from '../types.ts';
+import { EditIcon, MinusIcon, ReturnIcon, TrashIcon } from './Icons.tsx';
 
 interface ComponentCardProps {
   component: Component;

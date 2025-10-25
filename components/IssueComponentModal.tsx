@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Component } from '../types';
+import { Component } from '../types.ts';
 
 interface IssueComponentModalProps {
   component: Component | null;

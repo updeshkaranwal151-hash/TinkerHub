@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Component } from '../types';
-import { Category } from '../types';
-import { componentLibrary } from './componentLibrary';
+import { Component, Category } from '../types.ts';
+import { componentLibrary } from './componentLibrary.ts';
 
 interface AddComponentModalProps {
   onClose: () => void;

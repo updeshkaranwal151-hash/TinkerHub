@@ -1,4 +1,4 @@
-import { Component, IssueRecord } from '../types';
+import { Component, IssueRecord } from '../types.ts';
 
 const STORAGE_KEY = 'atl-inventory-components';
 

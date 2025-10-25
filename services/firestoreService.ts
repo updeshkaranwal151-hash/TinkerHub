@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { db } from './firebase.ts';
 import { 
   collection, 
   getDocs, 
@@ -13,7 +13,7 @@ import {
   DocumentSnapshot,
   Timestamp
 } from 'firebase/firestore';
-import { Component, IssueRecord } from '../types';
+import { Component, IssueRecord } from '../types.ts';
 
 const componentsCollectionRef = collection(db, 'components');
 
