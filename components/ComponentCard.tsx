@@ -4,6 +4,7 @@ import { EditIcon, MinusIcon, ReturnIcon, TrashIcon } from './Icons.tsx';
 
 interface ComponentCardProps {
   component: Component;
+  index: number;
   onOpenIssueModal: (component: Component) => void;
   onReturnIssue: (componentId: string, issueId: string) => void;
   onDelete: (id: string) => void;
@@ -11,7 +12,7 @@ interface ComponentCardProps {
   onToggleAvailability: (component: Component) => void;
 }
 
-const ComponentCard: React.FC<ComponentCardProps> = ({ component, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability }) => {
+const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability }) => {
   const availableQuantity = component.totalQuantity - component.issuedTo.length;
   const availabilityPercentage = component.totalQuantity > 0 ? (availableQuantity / component.totalQuantity) * 100 : 0;
   
@@ -22,7 +23,10 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, onOpenIssueMod
   const isAvailable = component.isAvailable;
 
   return (
-    <div className={`relative group bg-slate-800 rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-all duration-300 ease-in-out flex flex-col ${!isAvailable ? 'opacity-60 filter grayscale' : ''}`}>
+    <div 
+        className={`relative group bg-slate-800/70 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden transition-all duration-300 ease-in-out flex flex-col border border-slate-700 card-enter-animation hover:border-sky-500/50 hover:shadow-sky-500/10 ${!isAvailable ? 'opacity-60 filter grayscale' : ''}`}
+        style={{ animationDelay: `${index * 50}ms`, opacity: 0 }}
+    >
       <button 
         onClick={() => onDelete(component.id)}
         className="absolute top-3 right-3 z-10 p-2 bg-slate-900/50 rounded-full text-slate-400 hover:bg-red-600 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100"
@@ -45,7 +49,7 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, onOpenIssueMod
 
         <div className="mt-4">
           <div className="flex justify-between items-center text-sm text-slate-300">
-            <span>Available</span>
+            <span>In Stock</span>
             <span>{availableQuantity} / {component.totalQuantity}</span>
           </div>
           <div className="w-full bg-slate-700 rounded-full h-2.5 mt-1">
@@ -55,29 +59,35 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, onOpenIssueMod
             ></div>
           </div>
         </div>
-        
+
         <div className="mt-5 pt-4 border-t border-slate-700 flex flex-col gap-3">
-            <button 
-                onClick={() => onOpenIssueModal(component)}
-                disabled={availableQuantity <= 0 || !isAvailable}
-                className="w-full flex items-center justify-center gap-1 text-sm bg-yellow-600 hover:bg-yellow-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-semibold py-2 px-3 rounded-lg transition duration-200"
-                aria-label={`Issue ${component.name}`}
-            >
-                <MinusIcon /> Issue
-            </button>
+            <div className="flex items-center justify-between mt-1">
+                <span className={`text-sm font-medium ${isAvailable ? 'text-green-400' : 'text-red-400'}`}>
+                    {isAvailable ? 'Available for Issue' : 'Not Available'}
+                </span>
+                <label htmlFor={`toggle-${component.id}`} className="flex items-center cursor-pointer">
+                    <div className="relative">
+                        <input type="checkbox" id={`toggle-${component.id}`} className="sr-only" checked={isAvailable} onChange={() => onToggleAvailability(component)} />
+                        <div className="block bg-slate-600 w-14 h-8 rounded-full"></div>
+                        <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${isAvailable ? 'translate-x-6 bg-green-400' : ''}`}></div>
+                    </div>
+                </label>
+            </div>
             
             <div className="flex gap-2">
+                 <button 
+                    onClick={() => onOpenIssueModal(component)}
+                    disabled={availableQuantity <= 0 || !isAvailable}
+                    className="w-full flex items-center justify-center gap-1 text-sm bg-yellow-600 hover:bg-yellow-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-semibold py-2 px-3 rounded-lg transition duration-200"
+                    aria-label={`Issue ${component.name}`}
+                >
+                    <MinusIcon /> Issue
+                </button>
                 <button
                     onClick={() => onOpenEditModal(component)}
                     className="flex-1 flex items-center justify-center gap-1 text-sm bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2 px-3 rounded-lg transition duration-200"
                 >
                     <EditIcon /> Edit
-                </button>
-                <button
-                    onClick={() => onToggleAvailability(component)}
-                    className={`flex-1 flex items-center justify-center gap-1 text-sm ${isAvailable ? 'bg-red-800 hover:bg-red-900' : 'bg-green-600 hover:bg-green-700'} text-white font-semibold py-2 px-3 rounded-lg transition duration-200`}
-                >
-                    {isAvailable ? 'Not Available' : 'Make Available'}
                 </button>
             </div>
 

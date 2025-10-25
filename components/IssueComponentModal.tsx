@@ -23,8 +23,8 @@ const IssueComponentModal: React.FC<IssueComponentModalProps> = ({ component, on
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4" onClick={onClose}>
-      <div className="bg-slate-800 rounded-lg shadow-xl p-6 md:p-8 w-full max-w-md relative" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-50 p-4" onClick={onClose}>
+      <div className="bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-lg shadow-xl p-6 md:p-8 w-full max-w-md relative" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
         <h2 className="text-2xl font-bold mb-2 text-sky-400">Issue Component</h2>
         <p className="text-slate-300 mb-6">Component: <span className="font-semibold text-white">{component.name}</span></p>

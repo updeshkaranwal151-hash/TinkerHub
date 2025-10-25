@@ -82,8 +82,8 @@ const EditComponentModal: React.FC<EditComponentModalProps> = ({ onClose, onUpda
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg shadow-xl p-6 md:p-8 w-full max-w-lg relative max-h-screen overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-50 p-4">
+      <div className="bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-lg shadow-xl p-6 md:p-8 w-full max-w-lg relative max-h-screen overflow-y-auto">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">&times;</button>
         <h2 className="text-2xl font-bold mb-6 text-sky-400">Edit Component</h2>
         <form onSubmit={handleSubmit} className="space-y-4">

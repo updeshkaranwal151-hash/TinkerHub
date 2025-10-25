@@ -19,6 +19,33 @@
       .animate-float {
         animation: floatUp linear infinite;
       }
+
+      /* New animated gradient background */
+      @keyframes gradient-animation {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      body {
+        background: linear-gradient(-45deg, #0f172a, #132a4a, #312a6a, #0f172a);
+        background-size: 400% 400%;
+        animation: gradient-animation 25s ease infinite;
+      }
+
+      /* Staggered animation for cards */
+      @keyframes slide-up-fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .card-enter-animation {
+        animation: slide-up-fade-in 0.5s ease-out forwards;
+      }
     </style>
   <script type="importmap">
 {

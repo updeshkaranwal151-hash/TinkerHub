@@ -10,12 +10,13 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onAddComponent, onClearAll, onOpenShareModal }) => {
   return (
-    <header className="bg-slate-800/50 backdrop-blur-sm shadow-lg sticky top-0 z-20">
+    <header className="bg-slate-900/70 backdrop-blur-lg shadow-lg sticky top-0 z-20 border-b border-slate-700/50">
       <div className="container mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">
-            Tinker
-            <span className="text-sky-400">Hub</span>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-400">
+              TinkerHub
+            </span>
           </h1>
           <p className="text-sm text-slate-400">The ATL Lab Inventory Manager</p>
         </div>

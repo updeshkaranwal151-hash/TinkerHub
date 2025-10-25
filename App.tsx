@@ -6,10 +6,11 @@ import AddComponentModal from './components/AddComponentModal.tsx';
 import EditComponentModal from './components/EditComponentModal.tsx';
 import IssueComponentModal from './components/IssueComponentModal.tsx';
 import ShareModal from './components/ShareModal.tsx';
-import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon } from './components/Icons.tsx';
+import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon, AIAssistantIcon, EmptyStateIcon } from './components/Icons.tsx';
 import { generateDescription, generateImage } from './services/geminiService.ts';
 import PasswordProtection from './components/PasswordProtection.tsx';
 import * as localStorageService from './services/localStorageService.ts';
+import AILabAssistantModal from './components/AILabAssistantModal.tsx';
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
 type SortDirection = 'ascending' | 'descending';
@@ -27,6 +28,7 @@ const App: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isAssistantModalOpen, setIsAssistantModalOpen] = useState(false);
   const [componentToEdit, setComponentToEdit] = useState<Component | null>(null);
   const [componentToIssue, setComponentToIssue] = useState<Component | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -196,7 +198,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col">
+    <div className="min-h-screen text-slate-100 font-sans flex flex-col">
       <Header 
         onAddComponent={() => setIsAddModalOpen(true)} 
         onClearAll={handleClearAllComponents}
@@ -208,7 +210,7 @@ const App: React.FC = () => {
           <h2 className="text-2xl md:text-3xl font-bold text-sky-400">Inventory Dashboard</h2>
         </div>
 
-        <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between p-4 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-lg">
             <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto flex-grow">
               <div className="relative flex-grow">
                   <input
@@ -266,10 +268,11 @@ const App: React.FC = () => {
         ) : components.length > 0 ? (
             sortedAndFilteredComponents.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {sortedAndFilteredComponents.map(component => (
+                {sortedAndFilteredComponents.map((component, index) => (
                     <ComponentCard
                     key={component.id}
                     component={component}
+                    index={index}
                     onDelete={handleDeleteComponent}
                     onOpenIssueModal={handleOpenIssueModal}
                     onReturnIssue={handleReturnIssue}
@@ -285,12 +288,15 @@ const App: React.FC = () => {
                 </div>
             )
         ) : (
-            <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
-                <h3 className="text-xl font-semibold text-slate-300">Your inventory is empty!</h3>
-                <p className="text-slate-500 mt-2">Get started by adding your first component.</p>
+             <div className="text-center py-16 px-6 bg-slate-800/80 backdrop-blur-sm rounded-lg border border-slate-700">
+                <div className="flex justify-center mb-4 text-sky-500">
+                    <EmptyStateIcon />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-200">Your inventory is empty!</h3>
+                <p className="text-slate-400 mt-2">Let's add your first component to get started.</p>
                 <button
                     onClick={() => setIsAddModalOpen(true)}
-                    className="mt-6 flex items-center mx-auto gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 shadow-lg shadow-indigo-600/30"
+                    className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg shadow-indigo-600/30 transform hover:scale-105"
                 >
                     <PlusIcon />
                     Add Your First Component
@@ -332,8 +338,23 @@ const App: React.FC = () => {
       {isShareModalOpen && (
         <ShareModal onClose={() => setIsShareModalOpen(false)} />
       )}
+      
+      {isAssistantModalOpen && (
+        <AILabAssistantModal 
+          onClose={() => setIsAssistantModalOpen(false)}
+          components={components}
+        />
+      )}
 
-      <footer className="text-center text-slate-500 text-sm py-4 border-t border-slate-800">
+      <button
+        onClick={() => setIsAssistantModalOpen(true)}
+        className="fixed bottom-6 right-6 bg-gradient-to-br from-sky-500 to-indigo-600 text-white p-4 rounded-full shadow-2xl shadow-indigo-600/50 hover:scale-110 transform transition-transform duration-300 z-30 animate-pulse hover:animate-none"
+        aria-label="Open AI Lab Assistant"
+      >
+        <AIAssistantIcon />
+      </button>
+
+      <footer className="text-center text-slate-500 text-sm py-4 border-t border-slate-800/50 mt-8">
         this app is made with ❤️ by Apoorv karanwal
       </footer>
     </div>
