@@ -9,7 +9,7 @@ import ShareModal from './components/ShareModal.tsx';
 import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon } from './components/Icons.tsx';
 import { generateDescription, generateImage } from './services/geminiService.ts';
 import PasswordProtection from './components/PasswordProtection.tsx';
-import * as localStorageService from './services/localStorageService.ts';
+import * as firestoreService from './services/firestoreService.ts';
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
 type SortDirection = 'ascending' | 'descending';
@@ -33,26 +33,29 @@ const App: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'default', direction: 'ascending' });
 
-  // Load components from LocalStorage on first load
+  // Load components from Firestore on first load
   useEffect(() => {
     if (isAuthenticated) {
-        setIsLoading(true);
-        try {
-            const data = localStorageService.getComponents();
-            setComponents(data);
-        } catch (err) {
-            console.error("Error fetching components:", err);
-            alert("Could not load inventory data from local storage.");
-        } finally {
-            setIsLoading(false);
-        }
+        const fetchComponents = async () => {
+            setIsLoading(true);
+            try {
+                const data = await firestoreService.getComponents();
+                setComponents(data);
+            } catch (err) {
+                console.error("Error fetching components:", err);
+                alert("Could not load inventory data from the database.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchComponents();
     }
   }, [isAuthenticated]);
 
 
-  const handleAddComponent = (newComponent: Omit<Component, 'id' | 'createdAt'>) => {
+  const handleAddComponent = async (newComponent: Omit<Component, 'id' | 'createdAt'>) => {
     try {
-        const addedComponent = localStorageService.addComponent(newComponent);
+        const addedComponent = await firestoreService.addComponent(newComponent);
         setComponents(prev => [addedComponent, ...prev]);
         setIsAddModalOpen(false);
     } catch (err) {
@@ -61,10 +64,10 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteComponent = (id: string) => {
+  const handleDeleteComponent = async (id: string) => {
     if(window.confirm('Are you sure you want to delete this component? This action cannot be undone.')) {
         try {
-            localStorageService.deleteComponent(id);
+            await firestoreService.deleteComponent(id);
             setComponents(prev => prev.filter(c => c.id !== id));
         } catch (err) {
             alert("Error deleting component. Please try again.");
@@ -83,9 +86,9 @@ const App: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleUpdateComponent = (updatedComponent: Component) => {
+  const handleUpdateComponent = async (updatedComponent: Component) => {
     try {
-        localStorageService.updateComponent(updatedComponent);
+        await firestoreService.updateComponent(updatedComponent);
         setComponents(prev =>
             prev.map(c => (c.id === updatedComponent.id ? updatedComponent : c))
         );
@@ -97,9 +100,9 @@ const App: React.FC = () => {
     }
   };
 
-  const handleToggleAvailability = (component: Component) => {
+  const handleToggleAvailability = async (component: Component) => {
     try {
-        const updatedComponent = localStorageService.toggleAvailability(component);
+        const updatedComponent = await firestoreService.toggleAvailability(component);
         setComponents(prev =>
             prev.map(c =>
                 c.id === component.id ? updatedComponent : c
@@ -111,9 +114,9 @@ const App: React.FC = () => {
     }
   };
 
-  const handleConfirmIssue = (componentId: string, studentName: string) => {
+  const handleConfirmIssue = async (componentId: string, studentName: string) => {
     try {
-        const updatedComponent = localStorageService.issueComponent(componentId, studentName);
+        const updatedComponent = await firestoreService.issueComponent(componentId, studentName);
          setComponents(prev => 
             prev.map(c => 
                 c.id === componentId ? updatedComponent : c
@@ -127,9 +130,9 @@ const App: React.FC = () => {
     }
   };
 
-  const handleReturnIssue = (componentId: string, issueId: string) => {
+  const handleReturnIssue = async (componentId: string, issueId: string) => {
      try {
-        const updatedComponent = localStorageService.returnIssue(componentId, issueId);
+        const updatedComponent = await firestoreService.returnIssue(componentId, issueId);
         setComponents(prev =>
             prev.map(c =>
                 c.id === componentId ? updatedComponent : c
@@ -141,11 +144,11 @@ const App: React.FC = () => {
     }
   };
 
-  const handleClearAllComponents = () => {
+  const handleClearAllComponents = async () => {
     if (window.confirm('Are you sure you want to delete ALL components? This action cannot be undone.')) {
         setIsLoading(true);
         try {
-            localStorageService.clearAllComponents();
+            await firestoreService.clearAllComponents();
             setComponents([]);
         } catch (err) {
             alert("Error clearing data. Please try again.");
