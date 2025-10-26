@@ -7,7 +7,6 @@ import EditComponentModal from './components/EditComponentModal.tsx';
 import IssueComponentModal from './components/IssueComponentModal.tsx';
 import ShareModal from './components/ShareModal.tsx';
 import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon, AIAssistantIcon, EmptyStateIcon } from './components/Icons.tsx';
-import { generateDescription, generateImage } from './services/geminiService.ts';
 import PasswordProtection from './components/PasswordProtection.tsx';
 import * as localStorageService from './services/localStorageService.ts';
 import AILabAssistantModal from './components/AILabAssistantModal.tsx';
@@ -285,6 +284,7 @@ const App: React.FC = () => {
                 <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
                     <h3 className="text-xl font-semibold text-slate-300">No components found</h3>
                     <p className="text-slate-500 mt-2">Try adjusting your search or filter criteria.</p>
+
                 </div>
             )
         ) : (
@@ -309,8 +309,6 @@ const App: React.FC = () => {
         <AddComponentModal
           onClose={() => setIsAddModalOpen(false)}
           onAddComponent={handleAddComponent}
-          generateDescription={generateDescription}
-          generateImage={generateImage}
         />
       )}
 
@@ -322,8 +320,6 @@ const App: React.FC = () => {
               setComponentToEdit(null);
           }}
           onUpdateComponent={handleUpdateComponent}
-          generateDescription={generateDescription}
-          generateImage={generateImage}
         />
       )}
 
