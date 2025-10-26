@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from "https://esm.sh/@google/genai@1.27.0";
+import { GoogleGenAI } from "@google/genai";
 
 /**
  * Cloudflare Pages Function to handle POST requests for Gemini API.
