@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { WhatsAppIcon, FacebookIcon, TwitterIcon, TelegramIcon } from './Icons.tsx';
 
 interface ShareModalProps {
   onClose: () => void;
@@ -25,6 +26,36 @@ const ShareModal: React.FC<ShareModalProps> = ({ onClose }) => {
   
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(appUrl)}&bgcolor=f1f5f9`;
 
+  const shareText = "Check out this awesome ATL Lab Inventory Manager!";
+  const encodedUrl = encodeURIComponent(appUrl);
+  const encodedText = encodeURIComponent(shareText);
+
+  const shareLinks = [
+    {
+      name: 'WhatsApp',
+      icon: <WhatsAppIcon />,
+      url: `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}`,
+      color: 'hover:bg-green-500'
+    },
+    {
+      name: 'Facebook',
+      icon: <FacebookIcon />,
+      url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      color: 'hover:bg-blue-600'
+    },
+    {
+      name: 'Twitter',
+      icon: <TwitterIcon />,
+      url: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`,
+      color: 'hover:bg-sky-500'
+    },
+    {
+      name: 'Telegram',
+      icon: <TelegramIcon />,
+      url: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
+      color: 'hover:bg-blue-400'
+    },
+  ];
 
   return (
     <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-50 p-4" onClick={onClose}>
@@ -39,7 +70,25 @@ const ShareModal: React.FC<ShareModalProps> = ({ onClose }) => {
           </div>
         )}
         
-        <div className="mt-6">
+        <div className="my-6">
+            <p className="text-sm text-slate-400 mb-3">Share via:</p>
+            <div className="flex justify-center items-center gap-4">
+              {shareLinks.map(link => (
+                <a 
+                  key={link.name} 
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Share on ${link.name}`}
+                  className={`p-3 bg-slate-700 rounded-full text-white ${link.color} transition-colors duration-300 transform hover:scale-110`}
+                >
+                  {link.icon}
+                </a>
+              ))}
+            </div>
+        </div>
+
+        <div>
             <input 
                 type="text"
                 value={appUrl}

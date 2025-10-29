@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { generateImageWithAI } from '../services/geminiService.ts';
 import { Component, Category } from '../types.ts';
 import { componentLibrary } from './componentLibrary.ts';
+import { SparklesIcon } from './Icons.tsx';
 
 interface AddComponentModalProps {
   onClose: () => void;
@@ -20,6 +22,7 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
   const [category, setCategory] = useState<Category>(Category.GENERAL);
   const [totalQuantity, setTotalQuantity] = useState('1');
   const [imageUrl, setImageUrl] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +40,26 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
       imageUrl: imageUrl || 'https://placehold.co/400x300/1e293b/94a3b8/png?text=No+Image',
       isAvailable: true,
     });
+  };
+
+  const handleGenerateImage = async () => {
+    if (!name.trim()) {
+      alert('Please enter a component name first to generate an image.');
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const prompt = `A high-quality, professional, photorealistic image of a single electronic component: '${name}', on a clean, minimalist, white studio background. Centered. 4:3 aspect ratio.`;
+      
+      const base64ImageBytes = await generateImageWithAI(prompt);
+
+      setImageUrl(`data:image/jpeg;base64,${base64ImageBytes}`);
+    } catch (error: any) {
+      console.error('AI image generation failed:', error);
+      alert(`Sorry, the AI image could not be generated. Error: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +126,29 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-300">Component Image</label>
+            <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm font-medium text-slate-300">Component Image</label>
+                <button
+                    type="button"
+                    onClick={handleGenerateImage}
+                    disabled={isGenerating || !name.trim()}
+                    className="flex items-center gap-1.5 text-xs sm:text-sm bg-sky-600 hover:bg-sky-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-semibold py-1.5 px-3 rounded-lg transition duration-200"
+                >
+                    {isGenerating ? (
+                    <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                    </>
+                    ) : (
+                    <>
+                        <SparklesIcon /> <span className="hidden sm:inline">Generate with AI</span><span className="sm:hidden">AI Gen</span>
+                    </>
+                    )}
+                </button>
+            </div>
             <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-600 border-dashed rounded-md">
                 <div className="space-y-1 text-center">
                     <svg className="mx-auto h-12 w-12 text-slate-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
@@ -115,7 +160,7 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
                             <input id="image-upload" name="image-upload" type="file" className="sr-only" onChange={handleImageUpload} accept="image/*" />
                         </label>
                     </div>
-                    <p className="text-xs text-slate-500">or drag and drop</p>
+                    <p className="text-xs text-slate-500">or use AI generator</p>
                 </div>
             </div>
           </div>
