@@ -14,6 +14,18 @@ import { GoogleGenAI } from "@google/genai";
 export async function onRequestPost(context) {
   try {
     const { env } = context;
+    const apiKey = env.API_KEY;
+
+    // Validate the API key at the beginning.
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: 'The API_KEY secret is not configured on the server.' }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Initialize the Gemini client once.
+    const ai = new GoogleGenAI({ apiKey: apiKey });
+
     const body = await context.request.json();
     const { type, prompt, context: inventoryContext } = body;
 
@@ -23,8 +35,6 @@ export async function onRequestPost(context) {
           status: 400, headers: { 'Content-Type': 'application/json' },
         });
       }
-      
-      const ai = new GoogleGenAI({ apiKey: env.API_KEY });
       
       const fullPrompt = `You are "TinkerHub AI", a helpful and friendly lab assistant for an electronics inventory. Be concise and helpful. Use markdown for lists if needed.
       Here is the current inventory data in JSON format: ${inventoryContext}
@@ -52,15 +62,6 @@ export async function onRequestPost(context) {
           status: 400, headers: { 'Content-Type': 'application/json' },
         });
       }
-      
-      const apiKey = env.IMAGE_API_KEY;
-      if (!apiKey) {
-        return new Response(JSON.stringify({ error: 'The IMAGE_API_KEY secret is not configured on the server.' }), {
-          status: 500, headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      const ai = new GoogleGenAI({ apiKey: apiKey });
 
       const response = await ai.models.generateImages({
         model: 'imagen-4.0-generate-001',
