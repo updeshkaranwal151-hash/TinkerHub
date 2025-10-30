@@ -53,9 +53,9 @@ export async function onRequestPost(context) {
         });
       }
       
-      const apiKey = env.IMAGE_API_KEY || env.API_KEY;
+      const apiKey = env.IMAGE_API_KEY;
       if (!apiKey) {
-        return new Response(JSON.stringify({ error: 'API key is not configured on the server.' }), {
+        return new Response(JSON.stringify({ error: 'The IMAGE_API_KEY secret is not configured on the server.' }), {
           status: 500, headers: { 'Content-Type': 'application/json' },
         });
       }
