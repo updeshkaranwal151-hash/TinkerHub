@@ -13,6 +13,24 @@ export interface IssueRecord {
   issuedDate: string;
 }
 
+export enum LinkType {
+  DATASHEET = 'Datasheet',
+  TUTORIAL = 'Tutorial',
+  PROJECT = 'Project Idea',
+  OTHER = 'Other',
+}
+
+export interface ComponentLink {
+  type: LinkType;
+  url: string;
+}
+
+export interface MaintenanceRecord {
+  id: string;
+  date: string;
+  notes: string;
+}
+
 export interface Component {
   id:string;
   name: string;
@@ -23,4 +41,22 @@ export interface Component {
   imageUrl?: string;
   isAvailable: boolean;
   createdAt?: string; 
+  lowStockThreshold?: number;
+  links?: ComponentLink[];
+  isUnderMaintenance: boolean;
+  maintenanceLog: MaintenanceRecord[];
+}
+
+export interface RequiredComponent {
+  componentId: string;
+  componentName: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  studentName: string;
+  description: string;
+  requiredComponents: RequiredComponent[];
+  createdAt: string;
 }

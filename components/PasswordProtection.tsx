@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react';
+import * as localStorageService from '../services/localStorageService.ts';
 
 interface PasswordProtectionProps {
   onSuccess: () => void;
+  onAdminSuccess: () => void;
 }
 
-const CORRECT_PASSWORD = 'ATAL LAB 112233';
+const USER_PASSWORD = 'ATAL LAB 112233';
+const ADMIN_PASSWORD = 'ATAL LAB ADMIN';
 
 const AnimatedBackground: React.FC = () => {
     const icons = useMemo(() => ['#', '$', '_', '&', '@', '{', '}', '<', '>', '%', '*'], []);
@@ -45,13 +48,17 @@ const AnimatedBackground: React.FC = () => {
 };
 
 
-const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onSuccess }) => {
+const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onSuccess, onAdminSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === CORRECT_PASSWORD) {
+    if (password === ADMIN_PASSWORD) {
+      localStorageService.trackSuccessfulLogin();
+      onAdminSuccess();
+    } else if (password === USER_PASSWORD) {
+      localStorageService.trackSuccessfulLogin();
       onSuccess();
     } else {
       setError('Incorrect password. Please try again.');

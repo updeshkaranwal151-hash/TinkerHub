@@ -1,26 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Component, Category } from '../types.ts';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Component, Category, ComponentLink, LinkType } from '../types.ts';
 import { componentLibrary } from './componentLibrary.ts';
+import { ImageData } from './imageLibrary.ts';
+import { PlusIcon, TrashIcon } from './Icons.tsx';
+
 
 interface EditComponentModalProps {
   onClose: () => void;
   onUpdateComponent: (component: Component) => void;
   component: Component | null;
+  imageLibrary: Record<string, ImageData[]>;
 }
 
-const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-});
-
-const EditComponentModal: React.FC<EditComponentModalProps> = ({ onClose, onUpdateComponent, component }) => {
+const EditComponentModal: React.FC<EditComponentModalProps> = ({ onClose, onUpdateComponent, component, imageLibrary }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<Category>(Category.GENERAL);
   const [totalQuantity, setTotalQuantity] = useState('1');
   const [imageUrl, setImageUrl] = useState('');
+  const [lowStockThreshold, setLowStockThreshold] = useState('');
+  const [links, setLinks] = useState<ComponentLink[]>([]);
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [newLinkType, setNewLinkType] = useState<LinkType>(LinkType.DATASHEET);
 
   useEffect(() => {
     if (component) {
@@ -29,14 +30,34 @@ const EditComponentModal: React.FC<EditComponentModalProps> = ({ onClose, onUpda
       setCategory(component.category);
       setTotalQuantity(String(component.totalQuantity));
       setImageUrl(component.imageUrl || '');
+      setLowStockThreshold(String(component.lowStockThreshold ?? ''));
+      setLinks(component.links || []);
     }
   }, [component]);
 
   if (!component) return null;
 
+  const handleAddLink = () => {
+    if (newLinkUrl.trim()) {
+      try {
+        new URL(newLinkUrl); // Validate URL format
+        setLinks([...links, { type: newLinkType, url: newLinkUrl.trim() }]);
+        setNewLinkUrl('');
+      } catch (_) {
+        alert('Please enter a valid URL.');
+      }
+    }
+  };
+
+  const handleRemoveLink = (index: number) => {
+    setLinks(links.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const numericQuantity = parseInt(totalQuantity, 10);
+    const numericThreshold = lowStockThreshold ? parseInt(lowStockThreshold, 10) : undefined;
+    
     if (!name || isNaN(numericQuantity) || numericQuantity < 1) {
         alert("Please provide a valid name and a quantity of at least 1.");
         return;
@@ -48,25 +69,18 @@ const EditComponentModal: React.FC<EditComponentModalProps> = ({ onClose, onUpda
       category,
       totalQuantity: numericQuantity,
       imageUrl: imageUrl || 'https://placehold.co/400x300/1e293b/94a3b8/png?text=No+Image',
+      lowStockThreshold: numericThreshold,
+      links,
     });
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file.');
-        return;
-      }
-      try {
-        const base64 = await toBase64(file);
-        setImageUrl(base64);
-      } catch (error) {
-        console.error('Error converting file to base64', error);
-        alert('Could not process the image. Please try another one.');
-      }
-    }
-  };
+  const imagesToShow = useMemo(() => {
+    const categoryImages = imageLibrary[category] || [];
+    const generalImages = imageLibrary[Category.GENERAL] || [];
+    const combined = [...categoryImages, ...generalImages];
+    // Remove duplicates by URL, keeping the first occurrence
+    return Array.from(new Map(combined.map(item => [item.url, item])).values());
+  }, [category, imageLibrary]);
 
 
   return (
@@ -107,28 +121,63 @@ const EditComponentModal: React.FC<EditComponentModalProps> = ({ onClose, onUpda
                   Same as name
               </button>
             </div>
-            <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={4} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
+            <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
           </div>
           
-          <div>
-            <label htmlFor="totalQuantity" className="block text-sm font-medium text-slate-300">Total Quantity</label>
-            <input type="number" id="totalQuantity" value={totalQuantity} onChange={e => setTotalQuantity(e.target.value)} min="1" required className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="totalQuantity" className="block text-sm font-medium text-slate-300">Total Quantity</label>
+              <input type="number" id="totalQuantity" value={totalQuantity} onChange={e => setTotalQuantity(e.target.value)} min="1" required className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
+            </div>
+             <div>
+              <label htmlFor="lowStockThreshold" className="block text-sm font-medium text-slate-300">Low Stock Alert At</label>
+              <input type="number" id="lowStockThreshold" placeholder="e.g., 5 (Optional)" value={lowStockThreshold} onChange={e => setLowStockThreshold(e.target.value)} min="0" className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
+            </div>
+          </div>
+           <div>
+            <label className="block text-sm font-medium text-slate-300">Reference Links (Datasheets, Tutorials, etc.)</label>
+            <div className="space-y-2 mt-2">
+                {links.map((link, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-slate-700/50 p-2 rounded-md">
+                        <span className="text-xs font-semibold bg-slate-600 text-slate-200 px-2 py-1 rounded-md">{link.type}</span>
+                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-grow text-sm text-indigo-400 truncate hover:underline">{link.url}</a>
+                        <button type="button" onClick={() => handleRemoveLink(index)} className="p-1 text-slate-400 hover:text-red-500">
+                            <TrashIcon />
+                        </button>
+                    </div>
+                ))}
+            </div>
+             <div className="flex items-stretch gap-2 mt-2">
+                <select value={newLinkType} onChange={(e) => setNewLinkType(e.target.value as LinkType)} className="bg-slate-700 border-slate-600 rounded-md text-white text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    {Object.values(LinkType).map(type => <option key={type} value={type}>{type}</option>)}
+                </select>
+                <input type="url" placeholder="https://..." value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} className="flex-grow bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
+                <button type="button" onClick={handleAddLink} className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md">
+                    <PlusIcon/>
+                </button>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-300">Component Image</label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-600 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
-                    <svg className="mx-auto h-12 w-12 text-slate-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <div className="flex text-sm text-slate-400 justify-center">
-                        <label htmlFor="image-upload" className="relative cursor-pointer bg-slate-700 rounded-md font-medium text-indigo-400 hover:text-indigo-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-slate-800 focus-within:ring-indigo-500 px-3 py-1.5">
-                            <span>Upload an image</span>
-                            <input id="image-upload" name="image-upload" type="file" className="sr-only" onChange={handleImageUpload} accept="image/*" />
-                        </label>
-                    </div>
-                    <p className="text-xs text-slate-500">or drag and drop</p>
+            <div className="mt-2 p-2 bg-slate-900/50 border border-slate-600 rounded-lg max-h-40 overflow-y-auto">
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                {imagesToShow.map((img: ImageData) => (
+                    <button
+                    key={img.url}
+                    type="button"
+                    onClick={() => setImageUrl(img.url)}
+                    className={`relative rounded-lg overflow-hidden border-2 transition-all ${imageUrl === img.url ? 'border-indigo-500 scale-105' : 'border-transparent hover:border-slate-500'}`}
+                    title={img.name}
+                    >
+                    <img src={img.url} alt={img.name} className="w-full h-full object-contain aspect-square bg-slate-700/50 p-1" />
+                    {imageUrl === img.url && (
+                        <div className="absolute inset-0 bg-indigo-500/60 flex items-center justify-center">
+                        <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                    )}
+                    </button>
+                ))}
                 </div>
             </div>
           </div>
@@ -136,7 +185,7 @@ const EditComponentModal: React.FC<EditComponentModalProps> = ({ onClose, onUpda
           {imageUrl && (
             <div className="mt-2">
               <p className="block text-sm font-medium text-slate-300 mb-2">Image Preview</p>
-              <img src={imageUrl} alt="Component Preview" className="rounded-lg w-full h-auto max-h-48 object-contain bg-slate-700"/>
+              <img src={imageUrl} alt="Component Preview" className="rounded-lg w-full h-auto max-h-32 object-contain bg-slate-700 p-2"/>
             </div>
           )}
 

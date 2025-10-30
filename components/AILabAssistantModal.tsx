@@ -15,11 +15,25 @@ interface Message {
 
 const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, components }) => {
   const [messages, setMessages] = useState<Message[]>([
-    { sender: 'ai', text: "Hello! I'm your TinkerHub AI Assistant. Ask me anything about your inventory or for project ideas!" }
+    { sender: 'ai', text: "Hello! I'm your TinkerHub AI Assistant. I can help you with inventory reports and project ideas. What can I help you with today?" }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<'fast' | 'deep'>('fast');
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
+
+  // Updated suggestion prompts for better user experience
+  const reportPrompts = [
+    "What is the most issued component?",
+    "Give a monthly breakdown of issues.",
+    "Which components are running low on stock?",
+    "What's the total quantity of all items?"
+  ];
+
+  const creativePrompts = [
+    "Suggest a project with available parts.",
+    "What can I build with an Arduino?",
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -27,24 +41,25 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
 
   useEffect(scrollToBottom, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (prompt: string) => {
+    if (!prompt || isLoading) return;
 
-    const userMessage: Message = { sender: 'user', text: input };
+    const userMessage: Message = { sender: 'user', text: prompt };
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
     setIsLoading(true);
 
     try {
-      const inventoryContext = JSON.stringify(components.map(({ name, category, totalQuantity, issuedTo }) => ({
+      // The context now includes the full issue history for better analysis
+      const inventoryContext = JSON.stringify(components.map(({ name, category, totalQuantity, issuedTo, lowStockThreshold }) => ({
         name,
         category,
         totalQuantity,
         availableQuantity: totalQuantity - issuedTo.length,
-        issuedTo: issuedTo.map(i => i.studentName),
+        issueHistory: issuedTo.map(i => ({ studentName: i.studentName, issuedDate: i.issuedDate })),
+        lowStockThreshold: lowStockThreshold ?? null,
       })));
       
-      const aiResponseText = await askAILabAssistant(input, inventoryContext);
+      const aiResponseText = await askAILabAssistant(prompt, inventoryContext, mode);
       
       const aiMessage: Message = { sender: 'ai', text: aiResponseText };
       setMessages(prev => [...prev, aiMessage]);
@@ -57,9 +72,17 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
     }
   };
 
+  const handleSendFromInput = () => {
+    const trimmedInput = input.trim();
+    if (trimmedInput) {
+      sendMessage(trimmedInput);
+      setInput('');
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      handleSend();
+      handleSendFromInput();
     }
   };
 
@@ -105,6 +128,51 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
         </main>
 
         <footer className="p-4 border-t border-slate-700">
+            <div className="mb-4">
+              <p className="text-xs text-slate-400 mb-2 font-semibold">📈 Get Advanced Reports</p>
+              <div className="flex flex-wrap gap-2">
+                {reportPrompts.map((prompt, index) => (
+                  <button
+                    key={`report-${index}`}
+                    onClick={() => sendMessage(prompt)}
+                    disabled={isLoading}
+                    className="px-3 py-1.5 bg-slate-700/70 text-slate-300 text-xs font-medium rounded-full hover:bg-slate-600 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-4">
+              <p className="text-xs text-slate-400 mb-2 font-semibold">💡 Get Creative Ideas</p>
+              <div className="flex flex-wrap gap-2">
+                {creativePrompts.map((prompt, index) => (
+                  <button
+                    key={`creative-${index}`}
+                    onClick={() => sendMessage(prompt)}
+                    disabled={isLoading}
+                    className="px-3 py-1.5 bg-slate-700/70 text-slate-300 text-xs font-medium rounded-full hover:bg-slate-600 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mb-3">
+                <span className="text-xs font-semibold text-slate-400">Assistant Mode:</span>
+                <button
+                    onClick={() => setMode('fast')}
+                    className={`px-3 py-1 text-xs font-bold rounded-full transition-colors ${mode === 'fast' ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`}
+                >
+                    ⚡ Fast
+                </button>
+                <button
+                    onClick={() => setMode('deep')}
+                    className={`px-3 py-1 text-xs font-bold rounded-full transition-colors ${mode === 'deep' ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`}
+                >
+                    🧠 Deep Think
+                </button>
+            </div>
             <div className="flex items-center gap-2 bg-slate-700 rounded-lg p-2">
                 <input
                     type="text"
@@ -116,7 +184,7 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
                     disabled={isLoading}
                 />
                 <button
-                    onClick={handleSend}
+                    onClick={handleSendFromInput}
                     disabled={isLoading || !input.trim()}
                     className="p-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
                     aria-label="Send message"
