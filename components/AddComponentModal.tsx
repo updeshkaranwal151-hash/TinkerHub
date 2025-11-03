@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { Component, Category, ComponentLink, LinkType } from '../types.ts';
 import { componentLibrary } from './componentLibrary.ts';
@@ -170,7 +171,7 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
               <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="totalQuantity" className="block text-sm font-medium text-slate-300">Total Quantity</label>
                 <input type="number" id="totalQuantity" value={totalQuantity} onChange={e => setTotalQuantity(e.target.value)} min="1" required className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
@@ -254,7 +255,7 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
                 <>
                   <p className="text-sm font-medium text-slate-200 mb-2">Or Choose from Library</p>
                   <div className="mt-2 p-2 bg-slate-900/50 border border-slate-600 rounded-lg max-h-40 overflow-y-auto">
-                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                       {imagesToShow.map((img: ImageData) => (
                           <button
                           key={img.url}

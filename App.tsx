@@ -695,7 +695,7 @@ const App: React.FC = () => {
 
       <button
         onClick={() => setIsAssistantModalOpen(true)}
-        className="fixed bottom-6 right-6 bg-gradient-to-br from-sky-500 to-indigo-600 text-white p-4 rounded-full shadow-2xl shadow-indigo-600/50 hover:scale-110 transform transition-transform duration-300 z-30 animate-pulse hover:animate-none"
+        className="fixed bottom-4 right-4 bg-gradient-to-br from-sky-500 to-indigo-600 text-white p-4 rounded-full shadow-2xl shadow-indigo-600/50 hover:scale-110 transform transition-transform duration-300 z-30 animate-pulse hover:animate-none"
         aria-label="Open AI Lab Assistant"
       >
         <AIAssistantIcon />

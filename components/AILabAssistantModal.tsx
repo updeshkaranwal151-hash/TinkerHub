@@ -87,9 +87,9 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
     let imageMimeType: string | undefined;
 
     if (imageFile) {
-        imageBase64 = await fileToBase64(imageFile);
+        imageBase64 = (await fileToBase64(imageFile)).split(',')[1];
         imageMimeType = imageFile.type;
-        userMessage = { sender: 'user', text: prompt, imageUrl: imageBase64 };
+        userMessage = { sender: 'user', text: prompt, imageUrl: URL.createObjectURL(imageFile) };
     } else {
         userMessage = { sender: 'user', text: prompt };
     }
@@ -187,7 +187,7 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
         </main>
 
         <footer className="p-4 border-t border-slate-700">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mb-4">
                 <button
                     onClick={() => setShowSuggestionPrompts(prev => !prev)}
                     className="px-4 py-2 bg-slate-700/70 text-slate-300 text-sm font-medium rounded-lg hover:bg-slate-600 transition-colors duration-300"

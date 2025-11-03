@@ -279,3 +279,9 @@ export const QrcodeIcon = ({ className = "h-6 w-6" }: { className?: string }) =>
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 4h4v4H4zM4 16h4v4H4zM16 4h4v4h-4zM16 16h4v4h-4zM12 4h-2M4 12v-2M12 20h-2M4 10h2m4-2h2m2 0h2m-2 4h2m-4 2h2m-2 4h2m-6 0h2M16 12h2m-4 0h-2m0-4h2M10 8h2v2h-2z" />
     </svg>
 );
+
+export const MoreIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+    </svg>
+);

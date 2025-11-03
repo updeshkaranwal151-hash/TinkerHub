@@ -125,7 +125,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit, onLibraryUpdate }) => {
           {/* Analytics Dashboard */}
           <div className="mb-8 p-6 bg-slate-800/70 rounded-lg border border-slate-700 admin-panel-analytics">
               <h2 className="text-xl font-bold text-sky-400 mb-4">Analytics Dashboard</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-center">
                   <div className="bg-slate-700/50 p-4 rounded-lg flex flex-col items-center justify-center gap-2">
                       <EyeIcon />
                       <h3 className="text-sm font-bold text-slate-400 uppercase">Total Visits</h3>
