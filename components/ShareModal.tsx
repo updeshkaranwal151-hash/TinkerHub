@@ -24,8 +24,6 @@ const ShareModal: React.FC<ShareModalProps> = ({ onClose }) => {
     });
   };
   
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(appUrl)}&bgcolor=f1f5f9`;
-
   const shareText = "Check out this awesome ATL Lab Inventory Manager!";
   const encodedUrl = encodeURIComponent(appUrl);
   const encodedText = encodeURIComponent(shareText);
@@ -62,13 +60,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ onClose }) => {
       <div className="bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-lg shadow-xl p-6 md:p-8 w-full max-w-sm relative text-center" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
         <h2 className="text-2xl font-bold mb-4 text-sky-400">Share TinkerHub</h2>
-        <p className="text-slate-400 mb-6">Show your project to anyone by sharing the link or QR code.</p>
-
-        {appUrl && (
-          <div className="bg-slate-100 rounded-lg p-4 inline-block">
-             <img src={qrCodeUrl} alt="QR Code for App URL" width="250" height="250" />
-          </div>
-        )}
+        <p className="text-slate-400 mb-6">Show your project to anyone by sharing the link.</p>
         
         <div className="my-6">
             <p className="text-sm text-slate-400 mb-3">Share via:</p>

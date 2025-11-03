@@ -1,20 +1,19 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useMemo } from 'react';
 import * as localStorageService from '../services/localStorageService.ts';
+import { Logo } from './Logo.tsx';
 
 interface PasswordProtectionProps {
   onSuccess: () => void;
   onAdminSuccess: () => void;
 }
 
-const USER_PASSWORD = 'ATAL LAB 112233';
-const ADMIN_PASSWORD = 'ATAL LAB ADMIN';
-
 const AnimatedBackground: React.FC = () => {
     const icons = useMemo(() => ['#', '$', '_', '&', '@', '{', '}', '<', '>', '%', '*'], []);
     const colors = useMemo(() => ['#38bdf8', '#818cf8', '#f471b5', '#fbbf24', '#34d399', '#a78bfa', '#f87171'], []);
 
     const floatingIcons = useMemo(() => {
-        return Array.from({ length: 40 }).map((_, i) => ({
+        return Array.from({ length: 80 }).map((_, i) => ({
             id: i,
             char: icons[Math.floor(Math.random() * icons.length)],
             left: `${Math.random() * 100}%`,
@@ -49,21 +48,15 @@ const AnimatedBackground: React.FC = () => {
 
 
 const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onSuccess, onAdminSuccess }) => {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  
+  const handleUserLogin = () => {
+    localStorageService.trackSuccessfulLogin();
+    onSuccess();
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      localStorageService.trackSuccessfulLogin();
-      onAdminSuccess();
-    } else if (password === USER_PASSWORD) {
-      localStorageService.trackSuccessfulLogin();
-      onSuccess();
-    } else {
-      setError('Incorrect password. Please try again.');
-      setPassword('');
-    }
+  const handleAdminLogin = () => {
+    localStorageService.trackSuccessfulLogin();
+    onAdminSuccess();
   };
 
   return (
@@ -71,36 +64,29 @@ const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onSuccess, onAd
         <AnimatedBackground />
         <main className="flex-grow flex flex-col justify-center items-center">
             <div className="text-center mb-8 z-10">
+                <Logo className="h-20 w-20 mx-auto mb-4" />
                 <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
                 Tinker
                 <span className="text-sky-400">Hub</span>
                 </h1>
                 <p className="text-lg text-slate-400 mt-2">The ATL Lab Inventory Manager</p>
             </div>
-            <div className="bg-slate-800/80 backdrop-blur-sm rounded-lg shadow-xl p-6 md:p-8 w-full max-w-sm z-10 border border-slate-700">
-                <h2 className="text-xl font-bold mb-4 text-center text-slate-200">Enter Password to Access</h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label htmlFor="password" className="sr-only">Password</label>
-                    <input
-                    type="password"
-                    id="password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    required
-                    className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-3 px-4 text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="************"
-                    autoFocus
-                    />
+            <div className="password-protection-card bg-slate-800/80 backdrop-blur-sm rounded-lg shadow-xl p-6 md:p-8 w-full max-w-sm z-10 border border-slate-700">
+                <h2 className="text-xl font-bold mb-6 text-center text-slate-200">Select Your Access Level</h2>
+                <div className="space-y-4">
+                   <button
+                        onClick={handleUserLogin}
+                        className="w-full flex items-center justify-center py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-lg shadow-sky-600/30 transition-all duration-300 transform hover:scale-105"
+                    >
+                        User Panel
+                    </button>
+                    <button
+                        onClick={handleAdminLogin}
+                        className="w-full flex items-center justify-center py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-600/30 transition-all duration-300 transform hover:scale-105"
+                    >
+                        Admin Panel
+                    </button>
                 </div>
-                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-                <button
-                    type="submit"
-                    className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-600/30 transition duration-300"
-                >
-                    Unlock
-                </button>
-                </form>
             </div>
         </main>
         <footer className="w-full text-center text-slate-500 text-sm py-4 z-10">

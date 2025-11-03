@@ -1,4 +1,4 @@
-import { Component, IssueRecord, Category, Project, RequiredComponent, MaintenanceRecord } from '../types.ts';
+import { Component, IssueRecord, Category, Project, RequiredComponent, MaintenanceRecord, Attachment } from '../types.ts';
 import { ImageData } from '../components/imageLibrary.ts';
 
 
@@ -224,13 +224,24 @@ export const getProjects = (): Project[] => {
 export const addProject = (projectData: Omit<Project, 'id' | 'createdAt'>): Project => {
   const projects = getProjectsFromStorage();
   const newProject: Project = {
-    ...projectData,
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
+    // Set default values for all fields from projectData
+    name: projectData.name,
+    teamName: projectData.teamName,
+    teamMembers: projectData.teamMembers,
+    description: projectData.description,
+    features: projectData.features,
+    requiredComponents: projectData.requiredComponents,
+    projectDate: projectData.projectDate,
+    projectLogoUrl: projectData.projectLogoUrl,
+    youtubeUrl: projectData.youtubeUrl,
+    attachments: projectData.attachments,
   };
   saveProjectsToStorage([newProject, ...projects]);
   return newProject;
 };
+
 
 export const updateProject = (projectToUpdate: Project): void => {
   let projects = getProjectsFromStorage();

@@ -3,15 +3,30 @@
  * @param {string} prompt - The user's question.
  * @param {string} context - The stringified JSON of the current component inventory.
  * @param {'fast' | 'deep'} mode - The requested processing mode for the AI.
+ * @param {string} [imageBase64] - Optional Base64 encoded string of an image.
+ * @param {string} [imageMimeType] - Optional MIME type of the image (e.g., 'image/png').
  * @returns {Promise<string>} A promise that resolves to the AI's answer.
  * @throws {Error} Throws an error if the API call fails.
  */
-export const askAILabAssistant = async (prompt: string, context: string, mode: 'fast' | 'deep'): Promise<string> => {
+export const askAILabAssistant = async (
+  prompt: string, 
+  context: string, 
+  mode: 'fast' | 'deep', 
+  imageBase64?: string, 
+  imageMimeType?: string
+): Promise<string> => {
   try {
     const response = await fetch('/geminiService', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'assistant', prompt, context, mode }),
+      body: JSON.stringify({ 
+        type: 'assistant', 
+        prompt, 
+        context, 
+        mode,
+        imageBase64,
+        imageMimeType,
+      }),
     });
 
     if (!response.ok) {

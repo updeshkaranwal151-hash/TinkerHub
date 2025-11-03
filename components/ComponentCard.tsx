@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Component, IssueRecord, LinkType } from '../types.ts';
-import { EditIcon, MinusIcon, ReturnIcon, TrashIcon, WarningIcon, QRCodeIcon, DatasheetIcon, TutorialIcon, LinkIcon, ProjectIcon, MaintenanceIcon } from './Icons.tsx';
+import { EditIcon, MinusIcon, ReturnIcon, TrashIcon, WarningIcon, DatasheetIcon, TutorialIcon, LinkIcon, ProjectIcon, MaintenanceIcon } from './Icons.tsx';
 
 interface ComponentCardProps {
   component: Component;
@@ -12,7 +12,6 @@ interface ComponentCardProps {
   onDelete: (id: string) => void;
   onOpenEditModal: (component: Component) => void;
   onToggleAvailability: (component: Component) => void;
-  onOpenQRCodeModal: (component: Component) => void;
   onOpenMaintenanceModal: (component: Component) => void;
 }
 
@@ -25,7 +24,7 @@ const LinkTypeIcon: React.FC<{type: LinkType}> = ({ type }) => {
     }
 };
 
-const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability, onOpenQRCodeModal, onOpenMaintenanceModal }) => {
+const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability, onOpenMaintenanceModal }) => {
   const availableQuantity = component.totalQuantity - component.issuedTo.length;
   const availabilityPercentage = component.totalQuantity > 0 ? (availableQuantity / component.totalQuantity) * 100 : 0;
   
@@ -136,13 +135,6 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenI
                     aria-label={`Edit ${component.name}`}
                 >
                     <EditIcon />
-                </button>
-                 <button
-                    onClick={() => onOpenQRCodeModal(component)}
-                    className="p-2.5 flex items-center justify-center text-sm bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition duration-200"
-                    aria-label={`Generate QR Code for ${component.name}`}
-                >
-                    <QRCodeIcon />
                 </button>
                 <button
                     onClick={() => onOpenMaintenanceModal(component)}

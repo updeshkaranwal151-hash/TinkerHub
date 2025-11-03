@@ -16,10 +16,12 @@ import AdminPanel from './components/AdminPanel.tsx';
 import { imageLibrary as defaultImageLibrary, ImageData } from './components/imageLibrary.ts';
 import ProjectCard from './components/ProjectCard.tsx';
 import ProjectModal from './components/ProjectModal.tsx';
-import QRCodeModal from './components/QRCodeModal.tsx';
-import PublicComponentViewModal from './components/PublicComponentViewModal.tsx';
 import ImportCSVModal from './components/ImportCSVModal.tsx';
 import MaintenanceModal from './components/MaintenanceModal.tsx';
+import ProjectDetailView from './components/ProjectDetailView.tsx';
+import LandingPage from './components/LandingPage.tsx';
+import SplashScreen from './components/SplashScreen.tsx';
+
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
 type SortDirection = 'ascending' | 'descending';
@@ -48,6 +50,8 @@ const getMergedImageLibrary = (): Record<string, ImageData[]> => {
 
 
 const App: React.FC = () => {
+  const [showSplashScreen, setShowSplashScreen] = useState(true);
+  const [showLandingPage, setShowLandingPage] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [components, setComponents] = useState<Component[]>([]);
@@ -70,50 +74,32 @@ const App: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'default', direction: 'ascending' });
   const [viewMode, setViewMode] = useState<ViewMode>('inventory');
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  // QR Code related state
-  const [componentForQRCode, setComponentForQRCode] = useState<Component | null>(null);
-  const [scannedComponent, setScannedComponent] = useState<Component | null>(null);
-  const [initialHash, setInitialHash] = useState('');
+  const [isLightMode, setIsLightMode] = useState<boolean>(() => {
+    // Initialize from local storage, default to false (dark mode)
+    return localStorage.getItem('theme') === 'light';
+  });
 
   // Track app visit once on initial load for analytics
   useEffect(() => {
     localStorageService.trackVisit();
-    setInitialHash(window.location.hash);
   }, []);
 
-  // QR Code deep-linking handler
+  // Apply theme to body class
   useEffect(() => {
-    const processHash = (hash: string) => {
-        if (!hash) return;
-        const match = hash.match(/^#\/component\/(.+)$/);
-        if (match) {
-            const componentId = match[1];
-            if (components.length > 0) {
-                const component = components.find(c => c.id === componentId);
-                if (component) {
-                    setScannedComponent(component);
-                } else {
-                    alert('Component not found from QR code scan.');
-                }
-                setInitialHash(''); 
-                window.history.pushState("", document.title, window.location.pathname + window.location.search);
-            }
-        }
-    };
-
-    if (isAuthenticated && initialHash && components.length > 0) {
-        processHash(initialHash);
+    if (isLightMode) {
+      document.body.classList.add('light-mode');
+      document.body.classList.remove('bg-slate-900', 'text-slate-100');
+      document.body.classList.add('bg-slate-100', 'text-slate-900');
+      localStorage.setItem('theme', 'light');
+    } else {
+      document.body.classList.remove('light-mode');
+      document.body.classList.remove('bg-slate-100', 'text-slate-900');
+      document.body.classList.add('bg-slate-900', 'text-slate-100');
+      localStorage.setItem('theme', 'dark');
     }
-    
-    const handleHashChange = () => {
-        if (isAuthenticated) processHash(window.location.hash);
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [isAuthenticated, components, initialHash]);
-
+  }, [isLightMode]);
 
   // Load components and projects from Local Storage on first load
   useEffect(() => {
@@ -164,16 +150,6 @@ const App: React.FC = () => {
     setIsIssueModalOpen(true);
   };
   
-  const handleOpenQRCodeModal = (component: Component) => {
-    setComponentForQRCode(component);
-  };
-  
-  const handleClosePublicViewModal = () => {
-    setScannedComponent(null);
-    window.history.pushState("", document.title, window.location.pathname + window.location.search);
-  };
-
-
   const handleOpenEditModal = (component: Component) => {
     setComponentToEdit(component);
     setIsEditModalOpen(true);
@@ -286,7 +262,12 @@ const App: React.FC = () => {
 
   const handleUpdateProject = (updatedProjectData: Project) => {
       localStorageService.updateProject(updatedProjectData);
-      setProjects(prev => prev.map(p => p.id === updatedProjectData.id ? updatedProjectData : p));
+      const updatedProjects = projects.map(p => p.id === updatedProjectData.id ? updatedProjectData : p);
+      setProjects(updatedProjects);
+      // Also update the selected project if it's the one being edited
+      if(selectedProject?.id === updatedProjectData.id) {
+        setSelectedProject(updatedProjectData);
+      }
       setIsProjectModalOpen(false);
       setProjectToEdit(null);
   };
@@ -295,12 +276,17 @@ const App: React.FC = () => {
       if (window.confirm('Are you sure you want to delete this project?')) {
           localStorageService.deleteProject(projectId);
           setProjects(prev => prev.filter(p => p.id !== projectId));
+          setSelectedProject(null); // Close detail view if deleted
       }
   };
   
   const handleOpenEditProjectModal = (project: Project) => {
       setProjectToEdit(project);
       setIsProjectModalOpen(true);
+  };
+
+  const handleViewProject = (project: Project) => {
+      setSelectedProject(project);
   };
   
   // --- CSV Handlers ---
@@ -411,6 +397,14 @@ const App: React.FC = () => {
     });
   }, [components]);
 
+  if (showSplashScreen) {
+    return <SplashScreen onFinished={() => setShowSplashScreen(false)} />;
+  }
+
+  if (showLandingPage) {
+    return <LandingPage onGetStarted={() => setShowLandingPage(false)} />;
+  }
+
   if (!isAuthenticated) {
     return <PasswordProtection 
         onSuccess={() => setIsAuthenticated(true)}
@@ -429,7 +423,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen text-slate-100 font-sans flex flex-col">
+    <div className={`min-h-screen font-sans flex flex-col ${isLightMode ? 'text-slate-900' : 'text-slate-100'}`}>
       <Header 
         onAddComponent={() => setIsAddModalOpen(true)}
         onAddProject={() => { setProjectToEdit(null); setIsProjectModalOpen(true); }}
@@ -438,12 +432,14 @@ const App: React.FC = () => {
         onOpenImportModal={() => setIsImportModalOpen(true)}
         onExport={handleExportCSV}
         viewMode={viewMode}
+        isLightMode={isLightMode}
+        onToggleLightMode={() => setIsLightMode(prev => !prev)}
       />
       
       <main className="container mx-auto p-4 md:p-8 flex-grow">
         <div className="flex justify-center mb-6 border-b border-slate-700/50">
             <button
-              onClick={() => setViewMode('inventory')}
+              onClick={() => { setViewMode('inventory'); setSelectedProject(null); }}
               className={`py-3 px-6 text-base font-semibold transition-colors duration-300 rounded-t-lg ${viewMode === 'inventory' ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-white'}`}
             >
               Inventory
@@ -544,7 +540,6 @@ const App: React.FC = () => {
                         onReturnIssue={handleReturnIssue}
                         onOpenEditModal={handleOpenEditModal}
                         onToggleAvailability={handleToggleAvailability}
-                        onOpenQRCodeModal={handleOpenQRCodeModal}
                         onOpenMaintenanceModal={handleOpenMaintenanceModal}
                         />
                     ))}
@@ -575,43 +570,53 @@ const App: React.FC = () => {
         )}
 
         {viewMode === 'projects' && (
-          <>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold text-sky-400">Project Hub</h2>
-            </div>
-             {isLoading ? (
-                <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
-                    <h3 className="text-xl font-semibold text-slate-300 animate-pulse">Loading Projects...</h3>
-                </div>
-            ) : projects.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {projects.map((project, index) => (
-                        <ProjectCard 
-                            key={project.id}
-                            project={project}
-                            index={index}
-                            onEdit={handleOpenEditProjectModal}
-                            onDelete={handleDeleteProject}
-                        />
-                    ))}
-                </div>
-            ) : (
-                 <div className="text-center py-16 px-6 bg-slate-800/80 backdrop-blur-sm rounded-lg border border-slate-700">
-                    <div className="flex justify-center mb-4 text-sky-500">
-                        <ProjectIcon />
-                    </div>
-                    <h3 className="text-2xl font-bold text-slate-200">No projects yet!</h3>
-                    <p className="text-slate-400 mt-2">Create your first project to get started.</p>
-                    <button
-                        onClick={() => { setProjectToEdit(null); setIsProjectModalOpen(true); }}
-                        className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg shadow-indigo-600/30 transform hover:scale-105"
-                    >
-                        <PlusIcon />
-                        Create Your First Project
-                    </button>
-                </div>
-            )}
-          </>
+          selectedProject ? (
+            <ProjectDetailView 
+                project={selectedProject}
+                onClose={() => setSelectedProject(null)}
+                onEdit={handleOpenEditProjectModal}
+                onDelete={handleDeleteProject}
+            />
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-sky-400">Project Hub</h2>
+              </div>
+              {isLoading ? (
+                  <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
+                      <h3 className="text-xl font-semibold text-slate-300 animate-pulse">Loading Projects...</h3>
+                  </div>
+              ) : projects.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {projects.map((project, index) => (
+                          <ProjectCard 
+                              key={project.id}
+                              project={project}
+                              index={index}
+                              onEdit={handleOpenEditProjectModal}
+                              onDelete={handleDeleteProject}
+                              onView={handleViewProject}
+                          />
+                      ))}
+                  </div>
+              ) : (
+                   <div className="text-center py-16 px-6 bg-slate-800/80 backdrop-blur-sm rounded-lg border border-slate-700">
+                      <div className="flex justify-center mb-4 text-sky-500">
+                          <ProjectIcon />
+                      </div>
+                      <h3 className="text-2xl font-bold text-slate-200">No projects yet!</h3>
+                      <p className="text-slate-400 mt-2">Create your first project to showcase your innovation.</p>
+                      <button
+                          onClick={() => { setProjectToEdit(null); setIsProjectModalOpen(true); }}
+                          className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg shadow-indigo-600/30 transform hover:scale-105"
+                      >
+                          <PlusIcon />
+                          Create Your First Project
+                      </button>
+                  </div>
+              )}
+            </>
+          )
         )}
       </main>
 
@@ -665,21 +670,6 @@ const App: React.FC = () => {
           onClose={() => setIsAssistantModalOpen(false)}
           components={components}
         />
-      )}
-
-      {componentForQRCode && (
-        <QRCodeModal 
-            component={componentForQRCode}
-            onClose={() => setComponentForQRCode(null)}
-        />
-      )}
-
-      {scannedComponent && (
-          <PublicComponentViewModal
-              component={scannedComponent}
-              onClose={handleClosePublicViewModal}
-              onOpenIssueModal={handleOpenIssueModal}
-          />
       )}
 
       {isImportModalOpen && (

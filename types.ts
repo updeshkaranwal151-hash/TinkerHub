@@ -52,11 +52,25 @@ export interface RequiredComponent {
   componentName: string;
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  type: string; // MIME type
+  size: number; // in bytes
+  dataUrl: string; // base64
+}
+
 export interface Project {
   id: string;
   name: string;
-  studentName: string;
+  teamName: string;
+  teamMembers: string[];
   description: string;
+  features: string;
   requiredComponents: RequiredComponent[];
   createdAt: string;
+  projectDate: string;
+  projectLogoUrl?: string;
+  youtubeUrl?: string;
+  attachments: Attachment[];
 }

@@ -20,16 +20,9 @@
         animation: floatUp linear infinite;
       }
 
-      /* New animated gradient background */
-      @keyframes gradient-animation {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      body {
-        background: linear-gradient(-45deg, #0f172a, #132a4a, #312a6a, #0f172a);
-        background-size: 400% 400%;
-        animation: gradient-animation 25s ease infinite;
+      @keyframes wobble {
+        from { transform: rotate(-2deg) translateY(0.5px); }
+        to { transform: rotate(2deg) translateY(-0.5px); }
       }
 
       /* Staggered animation for cards */
@@ -46,6 +39,239 @@
       .card-enter-animation {
         animation: slide-up-fade-in 0.5s ease-out forwards;
       }
+
+      /* Splash Screen Animations */
+      @keyframes move-top-left {
+        from { transform: translate(-50vw, -50vh) rotate(-90deg) scale(0.5); opacity: 0; }
+        to { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+      }
+      @keyframes move-top-right {
+        from { transform: translate(50vw, -50vh) rotate(90deg) scale(0.5); opacity: 0; }
+        to { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+      }
+      @keyframes move-bottom-left {
+        from { transform: translate(-50vw, 50vh) rotate(90deg) scale(0.5); opacity: 0; }
+        to { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+      }
+      @keyframes move-bottom-right {
+        from { transform: translate(50vw, 50vh) rotate(-90deg) scale(0.5); opacity: 0; }
+        to { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+      }
+      
+      .animate-move-top-left { animation: move-top-left 2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+      .animate-move-top-right { animation: move-top-right 2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+      .animate-move-bottom-left { animation: move-bottom-left 2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+      .animate-move-bottom-right { animation: move-bottom-right 2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+      
+      @keyframes glow-in {
+        0% {
+          opacity: 0;
+          text-shadow: none;
+        }
+        50% {
+          opacity: 0.8;
+          text-shadow: 0 0 5px rgba(255,255,255,0.7), 0 0 10px rgba(59, 130, 246, 0.5), 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+        100% {
+          opacity: 1;
+          text-shadow: 0 0 8px rgba(255,255,255,1), 0 0 16px rgba(59, 130, 246, 0.7), 0 0 24px rgba(59, 130, 246, 0.5);
+        }
+      }
+      .animate-glow-in {
+          animation: glow-in 2s ease-out forwards;
+      }
+
+      /* Light Mode overrides */
+      body.light-mode {
+        background-color: #f1f5f9; /* slate-100 */
+        color: #1e293b; /* slate-800 */
+        background-image: none;
+        animation: none;
+      }
+
+      /* === GENERAL COLOR FLIPS === */
+      /* Text */
+      body.light-mode .text-slate-100,
+      body.light-mode .text-slate-200,
+      body.light-mode .text-white {
+        color: #1e293b !important; /* slate-800 */
+      }
+      body.light-mode .text-slate-300,
+      body.light-mode .text-slate-400 {
+        color: #475569 !important; /* slate-600 */
+      }
+      body.light-mode .text-slate-500 {
+        color: #64748b !important; /* slate-500 */
+      }
+      body.light-mode .text-slate-900 { /* For light text on dark elements */
+        color: #f8fafc !important; /* slate-50 */
+      }
+
+      /* Backgrounds */
+      body.light-mode .bg-slate-900,
+      body.light-mode .bg-slate-900\/50,
+      body.light-mode .bg-slate-900\/70,
+      body.light-mode .bg-slate-800,
+      body.light-mode .bg-slate-800\/40,
+      body.light-mode .bg-slate-800\/50,
+      body.light-mode .bg-slate-800\/70,
+      body.light-mode .bg-slate-800\/80 {
+        background-color: #ffffff !important;
+      }
+      body.light-mode .bg-slate-700,
+      body.light-mode .bg-slate-700\/50,
+      body.light-mode .bg-slate-700\/70 {
+        background-color: #f1f5f9 !important; /* slate-100 */
+      }
+      body.light-mode .bg-slate-600 {
+        background-color: #e2e8f0 !important; /* slate-200 */
+      }
+
+      /* Borders */
+      body.light-mode .border-slate-800,
+      body.light-mode .border-slate-800\/50,
+      body.light-mode .border-slate-700,
+      body.light-mode .border-slate-700\/50,
+      body.light-mode .border-slate-600 {
+        border-color: #e2e8f0 !important; /* slate-200 */
+      }
+
+      /* Accent Colors */
+      body.light-mode .text-sky-400 { color: #0ea5e9 !important; }
+      body.light-mode .text-indigo-400 { color: #6366f1 !important; }
+      body.light-mode .text-yellow-300 { color: #d97706 !important; }
+      body.light-mode .text-yellow-400 { color: #b45309 !important; }
+      body.light-mode .text-green-400 { color: #16a34a !important; }
+      body.light-mode .text-red-400,
+      body.light-mode .text-red-500 { color: #dc2626 !important; }
+      body.light-mode .text-orange-400,
+      body.light-mode .text-orange-500 { color: #f97316 !important; }
+
+      /* === COMPONENT STYLES === */
+      /* Header */
+      body.light-mode header.bg-slate-900\/70 {
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      }
+      body.light-mode header h1 span {
+        background-image: linear-gradient(to right, #0ea5e9, #6366f1) !important;
+      }
+
+      /* Main Buttons */
+      body.light-mode button.bg-indigo-600 { background-color: #4f46e5 !important; }
+      body.light-mode button.bg-indigo-600:hover { background-color: #4338ca !important; }
+      body.light-mode button.bg-sky-600 { background-color: #0ea5e9 !important; }
+      body.light-mode button.bg-sky-600:hover { background-color: #0284c7 !important; }
+      body.light-mode button.bg-red-800,
+      body.light-mode .admin-panel .bg-red-600 { background-color: #dc2626 !important; }
+      body.light-mode button.bg-red-800:hover,
+      body.light-mode .admin-panel .bg-red-600:hover { background-color: #b91c1c !important; }
+      body.light-mode button.bg-yellow-600 { background-color: #eab308 !important; }
+      body.light-mode button.bg-yellow-600:hover { background-color: #ca8a04 !important; }
+      body.light-mode button.bg-green-600 { background-color: #16a34a !important; }
+      body.light-mode button.bg-green-600:hover { background-color: #15803d !important; }
+
+      /* Secondary/Tertiary Buttons */
+      body.light-mode button.bg-slate-700, body.light-mode button.bg-slate-600 {
+        background-color: #e2e8f0 !important;
+        color: #334155 !important;
+      }
+      body.light-mode button.bg-slate-700:hover, body.light-mode button.bg-slate-600:hover {
+        background-color: #cbd5e1 !important;
+      }
+      body.light-mode button.disabled, body.light-mode button:disabled {
+        background-color: #e2e8f0 !important;
+        opacity: 0.7;
+      }
+      body.light-mode button.disabled:hover, body.light-mode button:disabled:hover {
+          background-color: #e2e8f0 !important;
+      }
+
+      /* Filter Bar & Inputs */
+      body.light-mode main .bg-slate-900\/50 {
+        background-color: #ffffff !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+      body.light-mode input.bg-slate-800,
+      body.light-mode select.bg-slate-800,
+      body.light-mode textarea.bg-slate-800,
+      body.light-mode input.bg-slate-700,
+      body.light-mode select.bg-slate-700,
+      body.light-mode textarea.bg-slate-700 {
+        background-color: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        color: #1e293b !important;
+      }
+      body.light-mode input::placeholder, body.light-mode textarea::placeholder {
+        color: #94a3b8 !important; /* slate-400 */
+      }
+
+      /* Component & Project Cards */
+      body.light-mode .group.bg-slate-800\/70 {
+        background-color: #ffffff !important;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+      }
+      body.light-mode .group.bg-slate-800\/70:hover {
+        border-color: #6366f1 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      }
+      body.light-mode .group.border-orange-500\/50 {
+        border-color: #f97316 !important;
+      }
+      body.light-mode .group .bg-slate-900\/50, /* Project card footer */
+      body.light-mode .group .bg-slate-700\/50 { /* Card issue log item */
+          background-color: #f1f5f9 !important;
+      }
+      body.light-mode .group .bg-slate-700 { /* Links */
+        background-color: #e2e8f0 !important;
+        color: #475569 !important;
+      }
+
+      /* Toggle Switch */
+      body.light-mode .block.bg-slate-600 {
+          background-color: #cbd5e1 !important; /* slate-300 */
+      }
+      body.light-mode input:checked + .block.bg-slate-600 {
+          background-color: #22c55e !important; /* green-500 */
+      }
+      body.light-mode .dot.bg-green-400 {
+          background-color: #ffffff !important;
+      }
+
+      /* Low Stock Alert */
+      body.light-mode main .bg-yellow-900\/50 {
+        background-color: #fefce8 !important; /* yellow-50 */
+        border-color: #facc15 !important; /* yellow-400 */
+      }
+
+      /* Modals */
+      body.light-mode .fixed.inset-0.bg-black\/80 { background-color: rgba(30, 41, 59, 0.5) !important; }
+      body.light-mode .bg-slate-800\/80.backdrop-blur-md {
+        background-color: #f8fafc !important; /* slate-50 */
+      }
+
+      /* AI Assistant Modal Specifics */
+      body.light-mode .bg-slate-800\/80 .bg-gradient-to-br { background-image: linear-gradient(to bottom right, #38bdf8, #818cf8) !important; }
+      body.light-mode .bg-slate-800\/80 .bg-slate-700 { background-color: #e9eef3 !important; }
+      body.light-mode .bg-slate-800\/80 .bg-indigo-600 { background-color: #4f46e5 !important; }
+      body.light-mode .bg-slate-800\/80 .bg-sky-500 { background-color: #0ea5e9 !important; }
+      body.light-mode .bg-slate-800\/80 .bg-indigo-500 { background-color: #6366f1 !important; }
+
+      /* Admin Panel */
+      body.light-mode .admin-panel-analytics .bg-slate-700\/50 { background-color: #ffffff !important; }
+      body.light-mode .admin-panel .file\:bg-indigo-600 { background-color: #4f46e5 !important; }
+      body.light-mode .admin-panel .file\:hover\:bg-indigo-700:hover { background-color: #4338ca !important; }
+
+      /* Password Protection Screen */
+      body.light-mode .password-protection-card {
+        background-color: #ffffff !important;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05) !important;
+      }
+
+      /* Footer */
+      body.light-mode footer { border-color: #e2e8f0 !important; }
     </style>
   <script type="importmap">
 {
@@ -54,7 +280,8 @@
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0",
-    "firebase/": "https://aistudiocdn.com/firebase@^12.4.0/"
+    "firebase/": "https://aistudiocdn.com/firebase@^12.4.0/",
+    "react-icons/": "https://aistudiocdn.com/react-icons@^5.5.0/"
   }
 }
 </script>

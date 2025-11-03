@@ -1,8 +1,10 @@
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Category } from '../types.ts';
 import { ImageData, imageLibrary as defaultImageLibrary } from './imageLibrary.ts';
 import * as localStorageService from '../services/localStorageService.ts';
-import { UploadIcon, TrashIcon, EditIcon, EyeIcon, UsersIcon, KeyIcon } from './Icons.tsx';
+import { UploadIcon, TrashIcon, EditIcon, EyeIcon, UsersIcon, CheckCircleIcon } from './Icons.tsx'; // Updated imports for new icons
 import EditImageModal from './EditImageModal.tsx';
 
 interface AdminPanelProps {
@@ -103,7 +105,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit, onLibraryUpdate }) => {
   };
 
   const currentCustomImages = useMemo(() => customLibrary[selectedCategory] || [], [customLibrary, selectedCategory]);
-  const currentDefaultImages = useMemo(() => defaultImageLibrary[selectedCategory] || [], [selectedCategory]);
+  // const currentDefaultImages = useMemo(() => defaultImageLibrary[selectedCategory] || [], [selectedCategory]); // Removed
 
   return (
     <>
@@ -121,7 +123,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit, onLibraryUpdate }) => {
         </header>
         <main className="container mx-auto p-4 md:p-8 flex-grow">
           {/* Analytics Dashboard */}
-          <div className="mb-8 p-6 bg-slate-800/70 rounded-lg border border-slate-700">
+          <div className="mb-8 p-6 bg-slate-800/70 rounded-lg border border-slate-700 admin-panel-analytics">
               <h2 className="text-xl font-bold text-sky-400 mb-4">Analytics Dashboard</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                   <div className="bg-slate-700/50 p-4 rounded-lg flex flex-col items-center justify-center gap-2">
@@ -135,14 +137,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit, onLibraryUpdate }) => {
                       <p className="text-3xl font-bold">{analyticsData.uniqueVisitors}</p>
                   </div>
                   <div className="bg-slate-700/50 p-4 rounded-lg flex flex-col items-center justify-center gap-2">
-                      <KeyIcon />
+                      <CheckCircleIcon />
                       <h3 className="text-sm font-bold text-slate-400 uppercase">Successful Logins</h3>
                       <p className="text-3xl font-bold">{analyticsData.successfulLogins}</p>
                   </div>
               </div>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 admin-panel">
               <div className="lg:col-span-1 space-y-6">
                    <div className="bg-slate-800/70 p-6 rounded-lg border border-slate-700">
                       <h2 className="text-xl font-bold text-sky-400 mb-4">1. Select Category to Manage</h2>
@@ -197,6 +199,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit, onLibraryUpdate }) => {
                       ) : <p className="text-slate-500 italic">No custom images uploaded for this category yet.</p>}
                   </div>
 
+                  {/* Removed the section for default images */}
+                  {/*
                   <div className="mt-8">
                       <h3 className="text-lg font-semibold text-slate-300 border-b border-slate-600 pb-2 mb-4">Default Library Images ({currentDefaultImages.length})</h3>
                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
@@ -208,6 +212,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit, onLibraryUpdate }) => {
                           ))}
                       </div>
                   </div>
+                  */}
               </div>
           </div>
         </main>

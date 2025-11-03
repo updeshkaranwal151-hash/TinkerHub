@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 /**
  * Cloudflare Pages Function to handle POST requests for Gemini API.
  * It expects a JSON body with a `type` of 'assistant'.
- * - For 'assistant', it requires a `prompt`, `context`, and `mode` ('fast' or 'deep').
+ * - For 'assistant', it requires a `prompt`, `context`, `mode`, and optionally `imageBase64` and `imageMimeType`.
  * The API key is securely accessed from environment variables.
  * @param {object} context - The Cloudflare function context.
  * @param {Request} context.request - The incoming request object.
@@ -26,11 +26,16 @@ export async function onRequestPost(context) {
     const ai = new GoogleGenAI({ apiKey: apiKey });
 
     const body = await context.request.json();
-    const { type, prompt, context: inventoryContext, mode } = body;
+    const { type, prompt, context: inventoryContext, mode, imageBase64, imageMimeType } = body;
 
     if (type === 'assistant') {
-      if (!prompt || !inventoryContext) {
-        return new Response(JSON.stringify({ error: 'Invalid assistant request. A prompt and context are required.' }), {
+      if (!prompt && !imageBase64) { // Allow image-only prompts if desired, but still require context
+        return new Response(JSON.stringify({ error: 'Invalid assistant request. A prompt or image is required.' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (!inventoryContext) {
+        return new Response(JSON.stringify({ error: 'Inventory context is required for the assistant.' }), {
           status: 400, headers: { 'Content-Type': 'application/json' },
         });
       }
@@ -38,16 +43,47 @@ export async function onRequestPost(context) {
       // Select the model based on the requested mode.
       const modelName = mode === 'deep' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
       
-      const fullPrompt = `You are "TinkerHub AI", a helpful and friendly lab assistant for an electronics inventory. Be concise and helpful. Use markdown for lists if needed.
-      Here is the current inventory data in JSON format: ${inventoryContext}
-      The user's query is: "${prompt}"
-      Based on the provided data, answer the user's query. If the user asks for a project idea, give them a simple but creative project idea using components from the inventory. Do not mention that you were given JSON data. Just answer the question naturally.`;
+      // Define the system instruction for the AI's role
+      const systemInstruction = `You are "TinkerHub AI", a helpful and friendly lab assistant for an electronics inventory. Be concise and helpful. Use markdown for lists if needed.`;
+
+      // Combine inventory context and user's query into a single text part for the user's turn
+      const userQueryWithContext = `Here is the current inventory data in JSON format: ${inventoryContext}\n\nMy query is: "${prompt}"`;
       
-      const response = await ai.models.generateContent({
+      const contentParts = [];
+      if (userQueryWithContext) {
+          contentParts.push({ text: userQueryWithContext });
+      }
+
+      // Add image part if provided
+      if (imageBase64 && imageMimeType) {
+          contentParts.push({ 
+              inlineData: {
+                  data: imageBase64,
+                  mimeType: imageMimeType,
+              } 
+          });
+      }
+
+      // Ensure there's at least one part to send
+      if (contentParts.length === 0) {
+        return new Response(JSON.stringify({ error: 'No content parts to send to the AI assistant.' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const generateContentParams = {
         model: modelName,
-        contents: fullPrompt,
-        config: { temperature: 0.7, topP: 0.95, topK: 64, maxOutputTokens: 800 },
-      });
+        contents: { parts: contentParts }, // Always send as parts array for consistency in multimodal
+        config: {
+            systemInstruction: systemInstruction, // Use systemInstruction config for the fixed role
+            temperature: 0.7, 
+            topP: 0.95, 
+            topK: 64, 
+            maxOutputTokens: 800 
+        },
+      };
+      
+      const response = await ai.models.generateContent(generateContentParams);
       const result = response.text;
 
       if (!result) {
