@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Component, IssueRecord, Category, Project, MaintenanceRecord } from './types.ts';
 import Header from './components/Header.tsx';
@@ -21,6 +19,7 @@ import MaintenanceModal from './components/MaintenanceModal.tsx';
 import ProjectDetailView from './components/ProjectDetailView.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import SplashScreen from './components/SplashScreen.tsx';
+import QRCodeModal from './components/QRCodeModal.tsx';
 
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
@@ -66,10 +65,12 @@ const App: React.FC = () => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
+  const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false); // New state for QR code modal
   const [componentToEdit, setComponentToEdit] = useState<Component | null>(null);
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [componentToIssue, setComponentToIssue] = useState<Component | null>(null);
   const [componentForMaintenance, setComponentForMaintenance] = useState<Component | null>(null);
+  const [componentForQRCode, setComponentForQRCode] = useState<Component | null>(null); // New state for QR code component
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'default', direction: 'ascending' });
@@ -250,6 +251,17 @@ const App: React.FC = () => {
       const updatedComponent = localStorageService.deleteMaintenanceLog(componentId, logId);
       setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
       setComponentForMaintenance(updatedComponent); // Keep modal in sync
+  };
+
+  // --- QR Code Handlers ---
+  const handleOpenQRCodeModal = (component: Component) => {
+    setComponentForQRCode(component);
+    setIsQRCodeModalOpen(true);
+  };
+
+  const handleCloseQRCodeModal = () => {
+    setIsQRCodeModalOpen(false);
+    setComponentForQRCode(null);
   };
 
 
@@ -541,6 +553,7 @@ const App: React.FC = () => {
                         onOpenEditModal={handleOpenEditModal}
                         onToggleAvailability={handleToggleAvailability}
                         onOpenMaintenanceModal={handleOpenMaintenanceModal}
+                        onOpenQRCodeModal={handleOpenQRCodeModal} // Pass the new handler
                         />
                     ))}
                     </div>
@@ -689,6 +702,13 @@ const App: React.FC = () => {
             onToggleMaintenance={handleToggleMaintenance}
             onAddLog={handleAddMaintenanceLog}
             onDeleteLog={handleDeleteMaintenanceLog}
+        />
+      )}
+
+      {isQRCodeModalOpen && (
+        <QRCodeModal
+          component={componentForQRCode}
+          onClose={handleCloseQRCodeModal}
         />
       )}
 

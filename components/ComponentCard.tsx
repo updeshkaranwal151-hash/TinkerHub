@@ -1,8 +1,6 @@
-
-
 import React from 'react';
 import { Component, IssueRecord, LinkType } from '../types.ts';
-import { EditIcon, MinusIcon, ReturnIcon, TrashIcon, WarningIcon, DatasheetIcon, TutorialIcon, LinkIcon, ProjectIcon, MaintenanceIcon } from './Icons.tsx';
+import { EditIcon, MinusIcon, ReturnIcon, TrashIcon, WarningIcon, DatasheetIcon, TutorialIcon, LinkIcon, ProjectIcon, MaintenanceIcon, QrcodeIcon } from './Icons.tsx';
 
 interface ComponentCardProps {
   component: Component;
@@ -13,6 +11,7 @@ interface ComponentCardProps {
   onOpenEditModal: (component: Component) => void;
   onToggleAvailability: (component: Component) => void;
   onOpenMaintenanceModal: (component: Component) => void;
+  onOpenQRCodeModal: (component: Component) => void; // New prop for QR code modal
 }
 
 const LinkTypeIcon: React.FC<{type: LinkType}> = ({ type }) => {
@@ -24,7 +23,7 @@ const LinkTypeIcon: React.FC<{type: LinkType}> = ({ type }) => {
     }
 };
 
-const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability, onOpenMaintenanceModal }) => {
+const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability, onOpenMaintenanceModal, onOpenQRCodeModal }) => {
   const availableQuantity = component.totalQuantity - component.issuedTo.length;
   const availabilityPercentage = component.totalQuantity > 0 ? (availableQuantity / component.totalQuantity) * 100 : 0;
   
@@ -142,6 +141,13 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenI
                     aria-label={`Maintenance for ${component.name}`}
                 >
                     <MaintenanceIcon />
+                </button>
+                <button
+                    onClick={() => onOpenQRCodeModal(component)}
+                    className="p-2.5 flex items-center justify-center text-sm bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg transition duration-200"
+                    aria-label={`Generate QR Code for ${component.name}`}
+                >
+                    <QrcodeIcon />
                 </button>
             </div>
 

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Logo } from './Logo.tsx';
 import { DatabaseIcon, CloudIcon, AIAssistantIcon, ProjectIcon, QrcodeIcon, ImportIcon, MoonIcon, UserCircleIcon } from './Icons.tsx';
@@ -134,7 +135,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                             <h3 className="text-lg font-semibold text-white mt-3">Your Inventory</h3>
                         </div>
                         
-                        <div className="absolute top-1/2 left-0 right-0 h-[6px] -translate-y-1/2 px-32">
+                        {/* Fix: Adjusted left and right values to precisely fit between the circular icons */}
+                        <div className="absolute top-1/2 left-[148px] right-[148px] h-[6px] -translate-y-1/2">
                             <div className="w-full h-full bg-slate-700/50 rounded-full" />
                             {isStreamFlowing && (
                                 <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-500 shadow-[0_0_15px_rgba(14,165,233,0.7)] stream-animation" />
