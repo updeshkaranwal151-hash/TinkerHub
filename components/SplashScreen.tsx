@@ -11,15 +11,15 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinished }) => {
   useEffect(() => {
     const textTimer = setTimeout(() => {
       setAnimationState('text-reveal');
-    }, 2000); // Logo animation is 2s, start text after
+    }, 1500); // Logo animation is 1.5s, start text after
 
     const fadeOutTimer = setTimeout(() => {
       setAnimationState('fading-out');
-    }, 4500); // Start fading out at 4.5s
+    }, 3000); // Start fading out at 3s
 
     const finishTimer = setTimeout(() => {
       onFinished();
-    }, 5000); // Total duration is 5s
+    }, 3500); // Total duration is 3.5s
 
     return () => {
       clearTimeout(textTimer);
