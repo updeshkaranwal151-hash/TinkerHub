@@ -98,17 +98,20 @@ export const toggleAvailability = async (component: Component): Promise<Componen
     return { ...component, isAvailable: newAvailability };
 }
 
-export const issueComponent = async (id: string, studentName: string): Promise<Component> => {
+// FIX: Added quantity parameter to the function signature to match the IssueRecord type.
+export const issueComponent = async (id: string, studentName: string, quantity: number): Promise<Component> => {
     const componentDocRef = doc(db, 'components', id);
     
     const docSnap = await getDoc(componentDocRef);
     if (!docSnap.exists()) throw new Error("Component not found");
     const component = docToComponent(docSnap);
 
+    // FIX: Added the 'quantity' property to the newIssue object to satisfy the IssueRecord interface.
     const newIssue: IssueRecord = {
         id: crypto.randomUUID(),
         studentName,
-        issuedDate: new Date().toISOString()
+        issuedDate: new Date().toISOString(),
+        quantity
     };
     
     const updatedIssuedTo = [...component.issuedTo, newIssue];

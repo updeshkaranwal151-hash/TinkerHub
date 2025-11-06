@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Component, IssueRecord, Category, Project, MaintenanceRecord } from './types.ts';
 import Header from './components/Header.tsx';
@@ -19,7 +22,6 @@ import MaintenanceModal from './components/MaintenanceModal.tsx';
 import ProjectDetailView from './components/ProjectDetailView.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import SplashScreen from './components/SplashScreen.tsx';
-import QRCodeModal from './components/QRCodeModal.tsx';
 
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
@@ -65,12 +67,10 @@ const App: React.FC = () => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
-  const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false); // New state for QR code modal
   const [componentToEdit, setComponentToEdit] = useState<Component | null>(null);
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [componentToIssue, setComponentToIssue] = useState<Component | null>(null);
   const [componentForMaintenance, setComponentForMaintenance] = useState<Component | null>(null);
-  const [componentForQRCode, setComponentForQRCode] = useState<Component | null>(null); // New state for QR code component
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'default', direction: 'ascending' });
@@ -184,9 +184,9 @@ const App: React.FC = () => {
     }
   };
 
-  const handleConfirmIssue = (componentId: string, studentName: string) => {
+  const handleConfirmIssue = (componentId: string, studentName: string, quantity: number) => {
     try {
-        const updatedComponent = localStorageService.issueComponent(componentId, studentName);
+        const updatedComponent = localStorageService.issueComponent(componentId, studentName, quantity);
          setComponents(prev => 
             prev.map(c => 
                 c.id === componentId ? updatedComponent : c
@@ -253,17 +253,6 @@ const App: React.FC = () => {
       setComponentForMaintenance(updatedComponent); // Keep modal in sync
   };
 
-  // --- QR Code Handlers ---
-  const handleOpenQRCodeModal = (component: Component) => {
-    setComponentForQRCode(component);
-    setIsQRCodeModalOpen(true);
-  };
-
-  const handleCloseQRCodeModal = () => {
-    setIsQRCodeModalOpen(false);
-    setComponentForQRCode(null);
-  };
-
 
   // --- Project Handlers ---
   const handleAddProject = (newProjectData: Omit<Project, 'id' | 'createdAt'>) => {
@@ -325,7 +314,7 @@ const App: React.FC = () => {
     const csvRows = [headers.join(',')];
 
     for (const component of components) {
-        const availableQuantity = component.totalQuantity - component.issuedTo.length;
+        const availableQuantity = component.totalQuantity - (component.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0);
         const linksJson = component.links ? JSON.stringify(component.links) : '';
         const maintenanceLogJson = component.maintenanceLog ? JSON.stringify(component.maintenanceLog) : '';
 
@@ -388,8 +377,8 @@ const App: React.FC = () => {
           case 'category':
             return a.category.localeCompare(b.category);
           case 'availability':
-            const aAvailable = a.totalQuantity - a.issuedTo.length;
-            const bAvailable = b.totalQuantity - b.issuedTo.length;
+            const aAvailable = a.totalQuantity - (a.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0);
+            const bAvailable = b.totalQuantity - (b.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0);
             return aAvailable - bAvailable;
           default:
             return 0;
@@ -404,7 +393,7 @@ const App: React.FC = () => {
 
   const lowStockComponents = useMemo(() => {
     return components.filter(c => {
-      const available = c.totalQuantity - c.issuedTo.length;
+      const available = c.totalQuantity - (c.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0);
       return c.lowStockThreshold != null && available <= c.lowStockThreshold && !c.isUnderMaintenance;
     });
   }, [components]);
@@ -477,7 +466,7 @@ const App: React.FC = () => {
                   <div>
                     <h3 className="font-bold text-yellow-300">Low Stock Alert!</h3>
                     <p className="text-sm text-yellow-400">
-                      The following components are running low: {lowStockComponents.map(c => `${c.name} (${c.totalQuantity - c.issuedTo.length} left)`).join(', ')}. Consider re-stocking soon.
+                      The following components are running low: {lowStockComponents.map(c => `${c.name} (${c.totalQuantity - (c.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0)} left)`).join(', ')}. Consider re-stocking soon.
                     </p>
                   </div>
                 </div>
@@ -553,7 +542,6 @@ const App: React.FC = () => {
                         onOpenEditModal={handleOpenEditModal}
                         onToggleAvailability={handleToggleAvailability}
                         onOpenMaintenanceModal={handleOpenMaintenanceModal}
-                        onOpenQRCodeModal={handleOpenQRCodeModal} // Pass the new handler
                         />
                     ))}
                     </div>
@@ -702,13 +690,6 @@ const App: React.FC = () => {
             onToggleMaintenance={handleToggleMaintenance}
             onAddLog={handleAddMaintenanceLog}
             onDeleteLog={handleDeleteMaintenanceLog}
-        />
-      )}
-
-      {isQRCodeModalOpen && (
-        <QRCodeModal
-          component={componentForQRCode}
-          onClose={handleCloseQRCodeModal}
         />
       )}
 

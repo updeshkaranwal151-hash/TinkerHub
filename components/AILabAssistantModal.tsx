@@ -103,8 +103,8 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
         name,
         category,
         totalQuantity,
-        availableQuantity: totalQuantity - issuedTo.length,
-        issueHistory: issuedTo.map(i => ({ studentName: i.studentName, issuedDate: i.issuedDate })),
+        availableQuantity: totalQuantity - (issuedTo || []).reduce((acc, issue) => acc + (issue.quantity || 1), 0),
+        issueHistory: (issuedTo || []).map(i => ({ studentName: i.studentName, issuedDate: i.issuedDate, quantity: i.quantity || 1 })),
         lowStockThreshold: lowStockThreshold ?? null,
       })));
       

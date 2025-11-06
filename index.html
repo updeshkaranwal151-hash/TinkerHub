@@ -81,12 +81,12 @@
           animation: glow-in 2s ease-out forwards;
       }
 
-      @keyframes rotateLogo {
+      @keyframes slow-rotate {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
       }
-      .animate-rotate-logo {
-        animation: rotateLogo 4s linear infinite; /* Adjust duration for desired speed */
+      .animate-slow-rotate {
+        animation: slow-rotate 15s linear infinite;
       }
 
       /* Light Mode overrides */
@@ -284,13 +284,12 @@
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://aistudiocdn.com/react@18.3.1/",
-    "react": "https://aistudiocdn.com/react@18.3.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@18.3.1/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0",
     "firebase/": "https://aistudiocdn.com/firebase@^12.4.0/",
-    "react-icons/": "https://aistudiocdn.com/react-icons@^5.5.0/",
-    "qrcode.react": "https://aistudiocdn.com/qrcode.react@^3.1.0"
+    "react-icons/": "https://aistudiocdn.com/react-icons@^5.5.0/"
   }
 }
 </script>

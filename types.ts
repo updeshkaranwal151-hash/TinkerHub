@@ -11,6 +11,7 @@ export interface IssueRecord {
   id: string;
   studentName: string;
   issuedDate: string;
+  quantity: number;
 }
 
 export enum LinkType {

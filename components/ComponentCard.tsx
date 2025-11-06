@@ -1,6 +1,8 @@
+
+
 import React from 'react';
 import { Component, IssueRecord, LinkType } from '../types.ts';
-import { EditIcon, MinusIcon, ReturnIcon, TrashIcon, WarningIcon, DatasheetIcon, TutorialIcon, LinkIcon, ProjectIcon, MaintenanceIcon, QrcodeIcon } from './Icons.tsx';
+import { EditIcon, MinusIcon, ReturnIcon, TrashIcon, WarningIcon, DatasheetIcon, TutorialIcon, LinkIcon, ProjectIcon, MaintenanceIcon } from './Icons.tsx';
 
 interface ComponentCardProps {
   component: Component;
@@ -11,7 +13,6 @@ interface ComponentCardProps {
   onOpenEditModal: (component: Component) => void;
   onToggleAvailability: (component: Component) => void;
   onOpenMaintenanceModal: (component: Component) => void;
-  onOpenQRCodeModal: (component: Component) => void; // New prop for QR code modal
 }
 
 const LinkTypeIcon: React.FC<{type: LinkType}> = ({ type }) => {
@@ -23,8 +24,8 @@ const LinkTypeIcon: React.FC<{type: LinkType}> = ({ type }) => {
     }
 };
 
-const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability, onOpenMaintenanceModal, onOpenQRCodeModal }) => {
-  const availableQuantity = component.totalQuantity - component.issuedTo.length;
+const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability, onOpenMaintenanceModal }) => {
+  const availableQuantity = component.totalQuantity - (component.issuedTo || []).reduce((acc, issue) => acc + (issue.quantity || 1), 0);
   const availabilityPercentage = component.totalQuantity > 0 ? (availableQuantity / component.totalQuantity) * 100 : 0;
   
   let progressBarColor = 'bg-green-500';
@@ -142,13 +143,6 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenI
                 >
                     <MaintenanceIcon />
                 </button>
-                <button
-                    onClick={() => onOpenQRCodeModal(component)}
-                    className="p-2.5 flex items-center justify-center text-sm bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg transition duration-200"
-                    aria-label={`Generate QR Code for ${component.name}`}
-                >
-                    <QrcodeIcon />
-                </button>
             </div>
 
             <div className="mt-2">
@@ -158,7 +152,7 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenI
                         {component.issuedTo.map((issue) => (
                             <div key={issue.id} className="flex justify-between items-center bg-slate-700/50 p-2 rounded-md">
                                 <div className="text-xs">
-                                    <p className="font-medium text-slate-200">{issue.studentName}</p>
+                                    <p className="font-medium text-slate-200">{issue.studentName} (x{issue.quantity || 1})</p>
                                     <p className="text-slate-400">{new Date(issue.issuedDate).toLocaleDateString()}</p>
 
                                 </div>

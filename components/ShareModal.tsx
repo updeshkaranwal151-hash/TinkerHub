@@ -1,9 +1,5 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WhatsAppIcon, FacebookIcon, TwitterIcon, TelegramIcon } from './Icons.tsx';
-// FIX: Explicitly import the default export from qrcode.react to resolve JSX element type error.
-import * as QRCodeModule from 'qrcode.react';
-const QRCode = QRCodeModule.default;
 
 interface ShareModalProps {
   onClose: () => void;
@@ -11,12 +7,15 @@ interface ShareModalProps {
 
 const ShareModal: React.FC<ShareModalProps> = ({ onClose }) => {
   const [appUrl, setAppUrl] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [copyButtonText, setCopyButtonText] = useState('Copy Link');
-  const qrCodeRef = useRef<HTMLDivElement>(null); // Ref for QR code container
 
   useEffect(() => {
     // Ensure this runs only on the client-side where window is available
-    setAppUrl(window.location.href);
+    const currentUrl = window.location.href;
+    setAppUrl(currentUrl);
+    // Use a white background for QR code for better scannability
+    setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(currentUrl)}&bgcolor=ffffff`);
   }, []);
 
   const handleCopyLink = () => {
@@ -29,22 +28,6 @@ const ShareModal: React.FC<ShareModalProps> = ({ onClose }) => {
     });
   };
   
-  const handleDownloadQRCode = () => {
-    if (qrCodeRef.current) {
-      // Find the canvas element inside the ref
-      const canvas = qrCodeRef.current.querySelector('canvas');
-      if (canvas) {
-        const url = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'tinkerhub-app-qrcode.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    }
-  };
-
   const shareText = "Check out this awesome ATL Lab Inventory Manager!";
   const encodedUrl = encodeURIComponent(appUrl);
   const encodedText = encodeURIComponent(shareText);
@@ -83,8 +66,17 @@ const ShareModal: React.FC<ShareModalProps> = ({ onClose }) => {
         <h2 className="text-2xl font-bold mb-4 text-sky-400">Share TinkerHub</h2>
         <p className="text-slate-400 mb-6">Show your project to anyone by sharing the link.</p>
         
-        <div className="my-6">
-            <p className="text-sm text-slate-400 mb-3">Or Share via Socials:</p>
+        {qrCodeUrl && (
+          <div className="mb-6">
+            <p className="text-sm text-slate-400 mb-2">Scan to share</p>
+            <div className="bg-white rounded-lg p-2 inline-block shadow-lg">
+                <img src={qrCodeUrl} alt="App URL QR Code" width="160" height="160" />
+            </div>
+          </div>
+        )}
+
+        <div className="mb-6">
+            <p className="text-sm text-slate-400 mb-3">Or share via:</p>
             <div className="flex justify-center items-center gap-4">
               {shareLinks.map(link => (
                 <a 
@@ -101,30 +93,8 @@ const ShareModal: React.FC<ShareModalProps> = ({ onClose }) => {
             </div>
         </div>
 
-        {/* New QR Code Section */}
-        <div className="my-6">
-            <p className="text-sm text-slate-400 mb-3">Or Share via QR Code:</p>
-            <div className="flex flex-col items-center gap-4">
-                <div ref={qrCodeRef} className="p-2 bg-white rounded-lg shadow-md border border-slate-300">
-                    {appUrl && (
-                        <QRCode
-                            value={appUrl}
-                            size={200}
-                            level="H"
-                            includeMargin={false}
-                        />
-                    )}
-                </div>
-                <button 
-                    onClick={handleDownloadQRCode} 
-                    className="py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-600/30 transition duration-300"
-                >
-                    Download QR Code
-                </button>
-            </div>
-        </div>
-
         <div>
+            <p className="text-sm text-slate-400 mb-2">Or copy the link</p>
             <input 
                 type="text"
                 value={appUrl}

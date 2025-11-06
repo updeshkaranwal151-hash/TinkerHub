@@ -5,13 +5,16 @@ import { Component } from '../types.ts';
 interface IssueComponentModalProps {
   component: Component | null;
   onClose: () => void;
-  onIssue: (componentId: string, studentName: string) => void;
+  onIssue: (componentId: string, studentName: string, quantity: number) => void;
 }
 
 const IssueComponentModal: React.FC<IssueComponentModalProps> = ({ component, onClose, onIssue }) => {
   const [studentName, setStudentName] = useState('');
+  const [quantity, setQuantity] = useState('1');
 
   if (!component) return null;
+
+  const availableQuantity = component.totalQuantity - (component.issuedTo || []).reduce((acc, issue) => acc + (issue.quantity || 1), 0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +22,12 @@ const IssueComponentModal: React.FC<IssueComponentModalProps> = ({ component, on
         alert("Please enter the student's name.");
         return;
     }
-    onIssue(component.id, studentName.trim());
+    const numQuantity = parseInt(quantity, 10);
+    if (isNaN(numQuantity) || numQuantity <= 0 || numQuantity > availableQuantity) {
+        alert(`Please enter a valid quantity between 1 and ${availableQuantity}.`);
+        return;
+    }
+    onIssue(component.id, studentName.trim(), numQuantity);
   };
 
   return (
@@ -41,6 +49,21 @@ const IssueComponentModal: React.FC<IssueComponentModalProps> = ({ component, on
               placeholder="e.g., Jane Doe"
               autoFocus
             />
+          </div>
+
+          <div>
+            <label htmlFor="quantity" className="block text-sm font-medium text-slate-300">Quantity to Issue</label>
+            <input 
+              type="number" 
+              id="quantity" 
+              value={quantity} 
+              onChange={e => setQuantity(e.target.value)} 
+              required 
+              min="1"
+              max={availableQuantity}
+              className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <p className="text-xs text-slate-400 mt-1">Available: {availableQuantity}</p>
           </div>
 
           <div className="flex justify-end gap-4 pt-4">

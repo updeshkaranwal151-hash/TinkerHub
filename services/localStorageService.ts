@@ -97,7 +97,7 @@ export const toggleAvailability = (component: Component): Component => {
   return updatedComponent;
 }
 
-export const issueComponent = (id: string, studentName: string): Component => {
+export const issueComponent = (id: string, studentName: string, quantity: number): Component => {
     let components = getComponentsFromStorage();
     let updatedComponent: Component | undefined;
 
@@ -106,9 +106,10 @@ export const issueComponent = (id: string, studentName: string): Component => {
             const newIssue: IssueRecord = {
                 id: crypto.randomUUID(),
                 studentName,
-                issuedDate: new Date().toISOString()
+                issuedDate: new Date().toISOString(),
+                quantity,
             };
-            const updatedIssuedTo = [...c.issuedTo, newIssue];
+            const updatedIssuedTo = [...(c.issuedTo || []), newIssue];
             updatedComponent = { ...c, issuedTo: updatedIssuedTo };
             return updatedComponent;
         }

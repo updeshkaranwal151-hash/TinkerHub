@@ -22,7 +22,7 @@ const LinkTypeIcon: React.FC<{type: LinkType}> = ({ type }) => {
 const PublicComponentViewModal: React.FC<PublicComponentViewModalProps> = ({ component, onClose, onOpenIssueModal }) => {
   if (!component) return null;
 
-  const availableQuantity = component.totalQuantity - component.issuedTo.length;
+  const availableQuantity = component.totalQuantity - (component.issuedTo || []).reduce((acc, issue) => acc + (issue.quantity || 1), 0);
   const isAvailableForIssue = component.isAvailable && availableQuantity > 0 && !component.isUnderMaintenance;
   const isLowStock = component.lowStockThreshold != null && availableQuantity <= component.lowStockThreshold;
 

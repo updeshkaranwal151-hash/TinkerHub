@@ -1,14 +1,14 @@
 
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Logo } from './Logo.tsx';
-import { DatabaseIcon, CloudIcon, AIAssistantIcon, ProjectIcon, QrcodeIcon, ImportIcon, MoonIcon, UserCircleIcon } from './Icons.tsx';
+import { DatabaseIcon, CloudIcon, AIAssistantIcon, ProjectIcon, ImportIcon, MoonIcon, UserCircleIcon } from './Icons.tsx';
 
 
 interface LandingPageProps {
     onGetStarted: () => void;
 }
 
-// FIX: Changed innerRef prop to be more specific with HTMLDivElement
 const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode; delay: number; innerRef: (el: HTMLDivElement | null) => void; }> = ({ icon, title, children, delay, innerRef }) => (
     <div ref={innerRef} className="fade-in-section bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-6 text-center transition-all duration-300 hover:border-sky-400/50 hover:-translate-y-2 hover:shadow-2xl hover:shadow-sky-500/10" style={{ transitionDelay: `${delay}ms` }}>
         <div className="w-16 h-16 mx-auto bg-slate-900 rounded-full flex items-center justify-center shadow-lg border-2 border-slate-700 text-sky-400 mb-4">
@@ -68,7 +68,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         { icon: <DatabaseIcon className="h-8 w-8 text-current" />, title: 'Smart Inventory', description: 'Easily track components, quantities, and issue history in real-time.' },
         { icon: <ProjectIcon />, title: 'Project Hub', description: 'Organize student projects, link required components, and showcase innovations.' },
         { icon: <AIAssistantIcon />, title: 'AI Lab Assistant', description: 'Get project ideas, inventory reports, and component info with our smart AI.' },
-        { icon: <QrcodeIcon className="h-8 w-8 text-current" />, title: 'QR Code Integration', description: 'Generate and scan QR codes for quick component access and management.' },
         { icon: <ImportIcon />, title: 'Easy Data Migration', description: 'Import and export your entire inventory with simple CSV files.' },
         { icon: <MoonIcon />, title: 'Sleek Interface', description: 'A modern, intuitive design with both light and dark modes for your comfort.' },
     ];
@@ -116,7 +115,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </header>
             
             <main>
-                {/* FIX: Changed ref callback to not return a value. */}
                 <section id="welcome" ref={el => { sectionsRef.current[0] = el; }} className="fade-in-section container mx-auto px-6 py-24 md:py-32 text-center overflow-hidden">
                     <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">
                         Welcome to... <br />
@@ -135,8 +133,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                             <h3 className="text-lg font-semibold text-white mt-3">Your Inventory</h3>
                         </div>
                         
-                        {/* Fix: Adjusted left and right values to precisely fit between the circular icons */}
-                        <div className="absolute top-1/2 left-[148px] right-[148px] h-[6px] -translate-y-1/2">
+                        <div className="absolute top-1/2 left-44 right-44 h-[6px] -translate-y-1/2">
                             <div className="w-full h-full bg-slate-700/50 rounded-full" />
                             {isStreamFlowing && (
                                 <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-500 shadow-[0_0_15px_rgba(14,165,233,0.7)] stream-animation" />
@@ -154,14 +151,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 
                 <section id="features" className="py-24 bg-slate-800/50">
                     <div className="container mx-auto px-6">
-                        {/* FIX: Changed ref callback to not return a value. */}
                         <div ref={el => { sectionsRef.current[1] = el; }} className="fade-in-section text-center mb-16">
                             <h2 className="text-3xl md:text-4xl font-bold text-sky-400">Everything You Need in One Hub</h2>
                             <p className="mt-4 text-lg text-slate-400 max-w-2xl mx-auto">TinkerHub is packed with features to make lab management effortless and innovation limitless.</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {features.map((feature, index) => (
-                                // FIX: Changed innerRef callback to not return a value.
                                 <FeatureCard key={feature.title} icon={feature.icon} title={feature.title} delay={index * 100} innerRef={el => { sectionsRef.current[2+index] = el; }}>
                                     {feature.description}
                                 </FeatureCard>
@@ -172,13 +167,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 
                 <section id="vision" className="py-24">
                     <div className="container mx-auto px-6 text-center">
-                        {/* FIX: Changed ref callback to not return a value. */}
                         <div ref={el => { sectionsRef.current[8] = el; }} className="fade-in-section max-w-4xl mx-auto">
                             <h2 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400 mb-12">
                                 From Vision to Victory
                             </h2>
                             <div className="space-y-10">
-                                {/* FIX: Changed ref callback to not return a value. */}
                                 <blockquote ref={el => { sectionsRef.current[9] = el; }} className="fade-in-section" style={{ transitionDelay: '100ms' }}>
                                     <p className="text-xl md:text-2xl font-light text-slate-200 leading-relaxed">
                                         "Every revolutionary idea begins with a single spark, a single component. TinkerHub isn't just an inventory; it's the <span className="font-semibold text-sky-400">launchpad for your next great invention.</span> Stop searching, start creating."
@@ -187,7 +180,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                                         Motivation
                                     </footer>
                                 </blockquote>
-                                {/* FIX: Changed ref callback to not return a value. */}
                                 <blockquote ref={el => { sectionsRef.current[10] = el; }} className="fade-in-section" style={{ transitionDelay: '250ms' }}>
                                     <p className="text-xl md:text-2xl font-light text-slate-200 leading-relaxed">
                                         "Success in innovation is born from order, not chaos. By transforming your lab's inventory into a strategic asset, TinkerHub paves the smoothest path from <span className="font-semibold text-green-400">concept to completion.</span>"
@@ -203,13 +195,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 
                 <section id="team" className="py-24 bg-slate-800/50">
                     <div className="container mx-auto px-6">
-                        {/* FIX: Changed ref callback to not return a value. */}
                         <div ref={el => { sectionsRef.current[11] = el; }} className="fade-in-section text-center mb-16">
                             <h2 className="text-3xl md:text-4xl font-bold text-sky-400">Meet the Team</h2>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             {teamMembers.map((member, index) => (
-                                // FIX: Changed ref callback to not return a value.
                                 <div key={member.name} ref={el => { sectionsRef.current[12+index] = el; }} className="fade-in-section bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 text-center transition-all duration-300 hover:border-sky-400/50 hover:-translate-y-2 hover:shadow-2xl hover:shadow-sky-500/10" style={{ transitionDelay: `${index * 100}ms` }}>
                                     <UserCircleIcon className="h-28 w-28 text-slate-700 mx-auto" />
                                     <h3 className="text-2xl font-bold text-white mt-4">{member.name}</h3>
@@ -220,7 +210,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                     </div>
                 </section>
                 
-                {/* FIX: Changed ref callback to not return a value. */}
                 <section id="get-started" ref={el => { sectionsRef.current[15] = el; }} className="fade-in-section container mx-auto px-6 py-24 text-center">
                     <h2 className="text-3xl md:text-4xl font-bold">
                         Specially for our <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">ATAL Lab</span>
@@ -233,7 +222,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </main>
 
             <footer className="bg-slate-900/50 border-t border-slate-700/50">
-                {/* FIX: Changed ref callback to not return a value. */}
                 <div ref={el => { sectionsRef.current[16] = el; }} className="fade-in-section container mx-auto px-6 py-8 text-center text-slate-500">
                     <div className="flex justify-center items-center gap-3 mb-4">
                         <Logo className="h-8 w-8" />
