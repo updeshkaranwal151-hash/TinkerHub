@@ -1,9 +1,7 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { Component, Category, ComponentLink, LinkType } from '../types.ts';
+import { Component, Category, ComponentLink, LinkType, ImageData } from '../types.ts';
 import { componentLibrary } from './componentLibrary.ts';
-import { ImageData } from './imageLibrary.ts';
 import { PlusIcon, TrashIcon, UploadIcon, CameraIcon } from './Icons.tsx';
 import CameraCaptureModal from './CameraCaptureModal.tsx';
 

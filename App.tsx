@@ -1,5 +1,9 @@
+
+
+
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Component, IssueRecord, Category, Project, MaintenanceRecord, AISuggestions } from './types.ts';
+import { Component, IssueRecord, Category, Project, MaintenanceRecord, AISuggestions, ImageData } from './types.ts';
 import Header from './components/Header.tsx';
 import ComponentCard from './components/ComponentCard.tsx';
 import AddComponentModal from './components/AddComponentModal.tsx';
@@ -8,10 +12,10 @@ import IssueComponentModal from './components/IssueComponentModal.tsx';
 import ShareModal from './components/ShareModal.tsx';
 import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon, AIAssistantIcon, EmptyStateIcon, ProjectIcon, WarningIcon } from './components/Icons.tsx';
 import PasswordProtection from './components/PasswordProtection.tsx';
-import * as localStorageService from './services/localStorageService.ts';
+import * as apiService from './services/apiService.ts';
 import AILabAssistantModal from './components/AILabAssistantModal.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
-import { imageLibrary as defaultImageLibrary, ImageData } from './components/imageLibrary.ts';
+import { imageLibrary as defaultImageLibrary } from './components/imageLibrary.ts';
 import ProjectCard from './components/ProjectCard.tsx';
 import ProjectModal from './components/ProjectModal.tsx';
 import ImportCSVModal from './components/ImportCSVModal.tsx';
@@ -20,6 +24,7 @@ import ProjectDetailView from './components/ProjectDetailView.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import SplashScreen from './components/SplashScreen.tsx';
 import SmartScannerModal from './components/SmartScannerModal.tsx';
+import * as customImageService from './services/customImageService';
 
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
@@ -33,13 +38,12 @@ interface SortConfig {
 
 // Helper to merge default and custom image libraries
 const getMergedImageLibrary = (): Record<string, ImageData[]> => {
-  const customLibrary = localStorageService.getCustomImageLibrary();
+  const customLibrary = customImageService.getCustomImageLibrary(); // Custom images are still local
   const mergedLibrary = { ...defaultImageLibrary };
 
   for (const category in customLibrary) {
     const customImages = customLibrary[category] || [];
     const defaultImages = mergedLibrary[category] || [];
-    // Combine and remove duplicates, giving preference to custom images
     const combined = [...customImages, ...defaultImages];
     mergedLibrary[category] = Array.from(new Map(combined.map(item => [item.url, item])).values());
   }
@@ -75,6 +79,7 @@ const App: React.FC = () => {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'default', direction: 'ascending' });
   const [viewMode, setViewMode] = useState<ViewMode>('inventory');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [dataVersion, setDataVersion] = useState(0);
 
   const [imageForAssistant, setImageForAssistant] = useState<string | null>(null);
   
@@ -83,40 +88,43 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    localStorageService.trackVisit();
+    apiService.trackVisit();
   }, []);
 
   useEffect(() => {
     if (isLightMode) {
       document.body.classList.add('light-mode');
-      document.body.classList.remove('bg-slate-900', 'text-slate-100');
-      document.body.classList.add('bg-slate-100', 'text-slate-900');
       localStorage.setItem('theme', 'light');
     } else {
       document.body.classList.remove('light-mode');
-      document.body.classList.remove('bg-slate-100', 'text-slate-900');
-      document.body.classList.add('bg-slate-900', 'text-slate-100');
       localStorage.setItem('theme', 'dark');
     }
   }, [isLightMode]);
 
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+        const [componentsData, projectsData] = await Promise.all([
+            apiService.getComponents(),
+            apiService.getProjects(),
+        ]);
+        setComponents(componentsData);
+        setProjects(projectsData);
+    } catch (err) {
+        console.error("Error fetching data from API:", err);
+        alert("Could not load data from the server. Please check your connection and try again.");
+    } finally {
+        setTimeout(() => setIsLoading(false), 300);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated && !isAdmin) {
-        setIsLoading(true);
-        try {
-            const componentData = localStorageService.getComponents();
-            setComponents(componentData);
-            const projectData = localStorageService.getProjects();
-            setProjects(projectData);
-        } catch (err) {
-            console.error("Error fetching data from local storage:", err);
-        } finally {
-            setTimeout(() => setIsLoading(false), 300);
-        }
+        loadData();
     } else if (isAdmin) {
         setIsLoading(false);
     }
-  }, [isAuthenticated, isAdmin]);
+  }, [isAuthenticated, isAdmin, dataVersion]);
 
   const handleOpenScanner = () => {
       setIsScannerModalOpen(true);
@@ -128,9 +136,15 @@ const App: React.FC = () => {
       setIsAssistantModalOpen(true);
   };
 
-  const handleAddComponent = (newComponent: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>) => {
+  // FIX: Added default values for isUnderMaintenance and maintenanceLog to match the expected type for apiService.addComponent.
+  const handleAddComponent = async (newComponent: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>) => {
     try {
-        const addedComponent = localStorageService.addComponent(newComponent);
+        const componentToAdd: Omit<Component, 'id' | 'createdAt'> = {
+            ...newComponent,
+            isUnderMaintenance: false,
+            maintenanceLog: [],
+        };
+        const addedComponent = await apiService.addComponent(componentToAdd);
         setComponents(prev => [addedComponent, ...prev]);
         setIsAddModalOpen(false);
     } catch (err) {
@@ -138,9 +152,9 @@ const App: React.FC = () => {
     }
   };
   
-  const handleAddMultipleComponents = (componentsToAdd: Omit<Component, 'id' | 'createdAt'>[]) => {
+  const handleAddMultipleComponents = async (componentsToAdd: Omit<Component, 'id' | 'createdAt'>[]) => {
     try {
-        const addedComponents = localStorageService.addMultipleComponents(componentsToAdd);
+        const addedComponents = await apiService.addMultipleComponents(componentsToAdd);
         setComponents(prev => [...addedComponents, ...prev]);
         setIsAssistantModalOpen(false); // Close AI modal on success
     } catch (err) {
@@ -149,10 +163,14 @@ const App: React.FC = () => {
   };
 
 
-  const handleDeleteComponent = (id: string) => {
+  const handleDeleteComponent = async (id: string) => {
     if(window.confirm('Are you sure you want to delete this component? This action cannot be undone.')) {
-        localStorageService.deleteComponent(id);
-        setComponents(prev => prev.filter(c => c.id !== id));
+        try {
+            await apiService.deleteComponent(id);
+            setComponents(prev => prev.filter(c => c.id !== id));
+        } catch(err) {
+            alert("Failed to delete component.");
+        }
     }
   };
 
@@ -166,48 +184,79 @@ const App: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleUpdateComponent = (updatedComponent: Component) => {
-    localStorageService.updateComponent(updatedComponent);
-    setComponents(prev =>
-        prev.map(c => (c.id === updatedComponent.id ? updatedComponent : c))
-    );
-    setIsEditModalOpen(false);
-    setComponentToEdit(null);
+  const handleUpdateComponent = async (updatedComponent: Component) => {
+    try {
+        const returnedComponent = await apiService.updateComponent(updatedComponent);
+        setComponents(prev =>
+            prev.map(c => (c.id === returnedComponent.id ? returnedComponent : c))
+        );
+        setIsEditModalOpen(false);
+        setComponentToEdit(null);
+    } catch (err) {
+        alert("Failed to update component.");
+    }
   };
 
-  const handleToggleAvailability = (component: Component) => {
-    const updatedComponent = localStorageService.toggleAvailability(component);
-    setComponents(prev =>
-        prev.map(c =>
-            c.id === component.id ? updatedComponent : c
-        )
-    );
+  const handleToggleAvailability = async (component: Component) => {
+    const updatedComponent = { ...component, isAvailable: !component.isAvailable };
+    await handleUpdateComponent(updatedComponent);
   };
 
-  const handleConfirmIssue = (componentId: string, studentName: string, quantity: number) => {
-    const updatedComponent = localStorageService.issueComponent(componentId, studentName, quantity);
-     setComponents(prev => 
-        prev.map(c => 
-            c.id === componentId ? updatedComponent : c
-        )
-    );
+  const handleConfirmIssue = async (componentId: string, studentName: string, quantity: number) => {
+    const component = components.find(c => c.id === componentId);
+    if (!component) return;
+    
+    const newIssue: IssueRecord = {
+      id: crypto.randomUUID(),
+      studentName,
+      quantity,
+      issuedDate: new Date().toISOString(),
+    };
+    
+    const updatedComponent = {
+        ...component,
+        issuedTo: [...component.issuedTo, newIssue],
+    };
+    
+    await handleUpdateComponent(updatedComponent);
     setIsIssueModalOpen(false);
     setComponentToIssue(null);
   };
 
-  const handleReturnIssue = (componentId: string, issueId: string) => {
-     const updatedComponent = localStorageService.returnIssue(componentId, issueId);
-    setComponents(prev =>
-        prev.map(c =>
-            c.id === componentId ? updatedComponent : c
-        )
-    );
+  const handleReturnIssue = async (componentId: string, issueId: string) => {
+    const component = components.find(c => c.id === componentId);
+    if (!component) return;
+    
+    const updatedComponent = {
+        ...component,
+        issuedTo: component.issuedTo.filter(issue => issue.id !== issueId),
+    };
+
+    await handleUpdateComponent(updatedComponent);
   };
 
-  const handleClearAllComponents = () => {
+  const handleClearAllComponents = async () => {
     if (window.confirm('Are you sure you want to delete ALL components? This action cannot be undone.')) {
-        localStorageService.clearAllComponents();
-        setComponents([]);
+        try {
+            await apiService.clearAllComponents();
+            setComponents([]);
+        } catch (err) {
+            alert("Failed to clear components.");
+        }
+    }
+  };
+
+  const handleClearAllProjects = async () => {
+    if (window.confirm('Are you sure you want to delete ALL projects? This action cannot be undone.')) {
+        try {
+            await apiService.clearAllProjects();
+            setProjects([]);
+            if (viewMode === 'projects') {
+              setSelectedProject(null);
+            }
+        } catch (err) {
+            alert("Failed to clear projects.");
+        }
     }
   };
   
@@ -216,45 +265,67 @@ const App: React.FC = () => {
       setIsMaintenanceModalOpen(true);
   };
   
-  const handleToggleMaintenance = (componentId: string) => {
-      const updatedComponent = localStorageService.toggleMaintenanceStatus(componentId);
-      setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
-      setComponentForMaintenance(updatedComponent);
+  const handleToggleMaintenance = async (componentId: string) => {
+      const component = components.find(c => c.id === componentId);
+      if(!component) return;
+      const updatedComponent = { ...component, isUnderMaintenance: !component.isUnderMaintenance };
+      const returnedComponent = await apiService.updateComponent(updatedComponent);
+      setComponents(prev => prev.map(c => c.id === componentId ? returnedComponent : c));
+      setComponentForMaintenance(returnedComponent);
   };
   
-  const handleAddMaintenanceLog = (componentId: string, notes: string) => {
-      const updatedComponent = localStorageService.addMaintenanceLog(componentId, notes);
-      setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
-      setComponentForMaintenance(updatedComponent);
+  const handleAddMaintenanceLog = async (componentId: string, notes: string) => {
+      const component = components.find(c => c.id === componentId);
+      if(!component) return;
+      const newLog: MaintenanceRecord = { id: crypto.randomUUID(), date: new Date().toISOString(), notes };
+      const updatedComponent = { ...component, maintenanceLog: [newLog, ...component.maintenanceLog] };
+      const returnedComponent = await apiService.updateComponent(updatedComponent);
+      setComponents(prev => prev.map(c => c.id === componentId ? returnedComponent : c));
+      setComponentForMaintenance(returnedComponent);
   };
   
-  const handleDeleteMaintenanceLog = (componentId: string, logId: string) => {
-      const updatedComponent = localStorageService.deleteMaintenanceLog(componentId, logId);
-      setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
-      setComponentForMaintenance(updatedComponent);
+  const handleDeleteMaintenanceLog = async (componentId: string, logId: string) => {
+      const component = components.find(c => c.id === componentId);
+      if(!component) return;
+      const updatedComponent = { ...component, maintenanceLog: component.maintenanceLog.filter(log => log.id !== logId) };
+      const returnedComponent = await apiService.updateComponent(updatedComponent);
+      setComponents(prev => prev.map(c => c.id === componentId ? returnedComponent : c));
+      setComponentForMaintenance(returnedComponent);
   };
 
-  const handleAddProject = (newProjectData: Omit<Project, 'id' | 'createdAt'>) => {
-      const newProject = localStorageService.addProject(newProjectData);
-      setProjects(prev => [newProject, ...prev]);
-      setIsProjectModalOpen(false);
-  };
-
-  const handleUpdateProject = (updatedProjectData: Project) => {
-      localStorageService.updateProject(updatedProjectData);
-      setProjects(projects.map(p => p.id === updatedProjectData.id ? updatedProjectData : p));
-      if(selectedProject?.id === updatedProjectData.id) {
-        setSelectedProject(updatedProjectData);
+  const handleAddProject = async (newProjectData: Omit<Project, 'id' | 'createdAt'>) => {
+      try {
+          const newProject = await apiService.addProject(newProjectData);
+          setProjects(prev => [newProject, ...prev]);
+          setIsProjectModalOpen(false);
+      } catch (err) {
+          alert("Failed to add project.");
       }
-      setIsProjectModalOpen(false);
-      setProjectToEdit(null);
   };
 
-  const handleDeleteProject = (projectId: string) => {
+  const handleUpdateProject = async (updatedProjectData: Project) => {
+      try {
+          const returnedProject = await apiService.updateProject(updatedProjectData);
+          setProjects(projects.map(p => p.id === returnedProject.id ? returnedProject : p));
+          if(selectedProject?.id === returnedProject.id) {
+            setSelectedProject(returnedProject);
+          }
+          setIsProjectModalOpen(false);
+          setProjectToEdit(null);
+      } catch (err) {
+          alert("Failed to update project.");
+      }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
       if (window.confirm('Are you sure you want to delete this project?')) {
-          localStorageService.deleteProject(projectId);
-          setProjects(prev => prev.filter(p => p.id !== projectId));
-          setSelectedProject(null);
+          try {
+              await apiService.deleteProject(projectId);
+              setProjects(prev => prev.filter(p => p.id !== projectId));
+              setSelectedProject(null);
+          } catch (err) {
+              alert("Failed to delete project.");
+          }
       }
   };
   
@@ -309,11 +380,15 @@ const App: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const handleImportComponents = (importedComponents: Omit<Component, 'id' | 'createdAt'>[]): void => {
-      const newComponents = localStorageService.addMultipleComponents(importedComponents);
-      setComponents(prev => [...newComponents, ...prev]);
-      setIsImportModalOpen(false);
-      alert(`${newComponents.length} components were successfully imported!`);
+  const handleImportComponents = async (importedComponents: Omit<Component, 'id' | 'createdAt'>[]): Promise<void> => {
+      try {
+          const newComponents = await apiService.addMultipleComponents(importedComponents);
+          setComponents(prev => [...newComponents, ...prev]);
+          setIsImportModalOpen(false);
+          alert(`${newComponents.length} components were successfully imported!`);
+      } catch (err) {
+          alert("Failed to import components.");
+      }
   };
 
   const filteredComponents = useMemo(() => components.filter(component => {
@@ -361,10 +436,18 @@ const App: React.FC = () => {
     return <LandingPage onGetStarted={() => setShowLandingPage(false)} />;
   }
 
+  const handleLogin = (isAdminLogin: boolean) => {
+      apiService.trackLogin();
+      setIsAuthenticated(true);
+      if(isAdminLogin) {
+          setIsAdmin(true);
+      }
+  };
+
   if (!isAuthenticated) {
     return <PasswordProtection 
-        onSuccess={() => setIsAuthenticated(true)}
-        onAdminSuccess={() => { setIsAuthenticated(true); setIsAdmin(true); }}
+        onSuccess={() => handleLogin(false)}
+        onAdminSuccess={() => handleLogin(true)}
     />;
   }
 
@@ -372,6 +455,9 @@ const App: React.FC = () => {
     return <AdminPanel 
         onExit={() => setIsAdmin(false)} 
         onLibraryUpdate={() => setImageLibrary(getMergedImageLibrary())}
+        onClearAllComponents={handleClearAllComponents}
+        onClearAllProjects={handleClearAllProjects}
+        onDataRestored={() => setDataVersion(v => v + 1)}
     />
   }
 

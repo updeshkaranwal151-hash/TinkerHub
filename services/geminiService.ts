@@ -1,3 +1,4 @@
+
 import { AISuggestions } from '../types.ts';
 
 /**
@@ -18,7 +19,7 @@ export const askAILabAssistant = async (
   imageMimeType?: string
 ): Promise<string> => {
   try {
-    const response = await fetch('/geminiService', {
+    const response = await fetch('/api/gemini', { // Use the new backend endpoint
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -59,7 +60,7 @@ export const analyzeAndCountComponents = async (
   imageMimeType: string
 ): Promise<AISuggestions[]> => {
   try {
-    const response = await fetch('/geminiService', {
+    const response = await fetch('/api/gemini', { // Use the new backend endpoint
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

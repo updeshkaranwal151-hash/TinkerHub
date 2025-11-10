@@ -1,6 +1,9 @@
 
+
+
+
 import React, { useMemo } from 'react';
-import * as localStorageService from '../services/localStorageService.ts';
+import * as apiService from '../services/apiService';
 import { Logo } from './Logo.tsx';
 
 interface PasswordProtectionProps {
@@ -50,12 +53,12 @@ const AnimatedBackground: React.FC = () => {
 const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onSuccess, onAdminSuccess }) => {
   
   const handleUserLogin = () => {
-    localStorageService.trackSuccessfulLogin();
+    apiService.trackLogin();
     onSuccess();
   };
 
   const handleAdminLogin = () => {
-    localStorageService.trackSuccessfulLogin();
+    apiService.trackLogin();
     onAdminSuccess();
   };
 

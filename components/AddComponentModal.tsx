@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
-import { Component, Category, ComponentLink, LinkType } from '../types.ts';
+// FIX: Import ImageData from types.ts where it is properly exported.
+import { Component, Category, ComponentLink, LinkType, ImageData } from '../types.ts';
 import { componentLibrary } from './componentLibrary.ts';
-import { ImageData } from './imageLibrary.ts';
 import { PlusIcon, TrashIcon, UploadIcon, CameraIcon } from './Icons.tsx';
 import CameraCaptureModal from './CameraCaptureModal.tsx';
 
@@ -215,41 +215,48 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
                    <div className="relative w-full max-w-xs mx-auto">
                         <img 
                             src={uploadedImagePreview} 
-                            alt="Uploaded Preview" 
-                            className="w-full h-auto object-cover rounded-md border border-slate-500" 
+                            alt="Uploaded Preview"
+                            className="h-32 w-auto object-contain rounded-md"
                         />
-                        <button 
-                            type="button"
-                            onClick={handleClearUploadedImage}
-                            className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1"
-                            aria-label="Remove uploaded image"
+                        <button
+                          type="button"
+                          onClick={handleClearUploadedImage}
+                          className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 text-xs leading-none"
+                          aria-label="Remove uploaded image"
                         >
-                            <TrashIcon className="h-4 w-4" />
+                          <TrashIcon className="h-3 w-3" />
                         </button>
-                    </div>
+                   </div>
                 </div>
               ) : (
+                <div className="mt-2 flex items-center gap-3">
+                    <label 
+                        htmlFor="image-upload-input-add" 
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer transition duration-300"
+                    >
+                        <UploadIcon /> Upload from Device
+                        <input 
+                            id="image-upload-input-add"
+                            type="file" 
+                            accept="image/png, image/jpeg, image/webp, image/gif" 
+                            onChange={handleFileUpload} 
+                            className="sr-only" 
+                        />
+                    </label>
+                     <button
+                        type="button"
+                        onClick={() => setIsCameraOpen(true)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg cursor-pointer transition duration-300"
+                      >
+                        <CameraIcon /> Capture with Camera
+                      </button>
+                </div>
+              )}
+              {uploadedImageFile && <p className="text-xs text-slate-400 mt-2">{uploadedImageFile.name}</p>}
+
+              {!uploadedImagePreview && (
                 <>
-                  <div className="mt-2 mb-4 p-3 bg-slate-900/50 border border-slate-600 rounded-lg">
-                      <p className="text-sm font-medium text-slate-200 mb-2">Add an Image</p>
-                      <div className="flex items-center gap-3">
-                          <label 
-                              htmlFor="image-upload-input-add" 
-                              className="flex items-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer"
-                          >
-                              <UploadIcon /> Upload
-                              <input id="image-upload-input-add" type="file" accept="image/*" onChange={handleFileUpload} className="sr-only" />
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setIsCameraOpen(true)}
-                            className="flex items-center gap-2 py-2 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg cursor-pointer"
-                          >
-                            <CameraIcon /> Capture
-                          </button>
-                      </div>
-                  </div>
-                  <p className="text-sm font-medium text-slate-200 mb-2">Or Choose from Library</p>
+                  <p className="text-sm font-medium text-slate-200 mt-4 mb-2">Or choose from image library</p>
                   <div className="mt-2 p-2 bg-slate-900/50 border border-slate-600 rounded-lg max-h-40 overflow-y-auto">
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                       {imagesToShow.map((img: ImageData) => (
@@ -257,10 +264,15 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
                           key={img.url}
                           type="button"
                           onClick={() => handleSelectLibraryImage(img.url)}
-                          className={`relative rounded-lg overflow-hidden border-2 ${imageUrl === img.url ? 'border-indigo-500 scale-105' : 'border-transparent hover:border-slate-500'}`}
+                          className={`relative rounded-lg overflow-hidden border-2 transition-all ${imageUrl === img.url ? 'border-indigo-500 scale-105' : 'border-transparent hover:border-slate-500'}`}
                           title={img.name}
                           >
                           <img src={img.url} alt={img.name} className="w-full h-full object-contain aspect-square bg-slate-700/50 p-1" />
+                          {imageUrl === img.url && (
+                              <div className="absolute inset-0 bg-indigo-500/60 flex items-center justify-center">
+                              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                              </div>
+                          )}
                           </button>
                       ))}
                       </div>
@@ -269,22 +281,22 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
               )}
             </div>
             
-           {imageUrl && !uploadedImagePreview && (
+            {imageUrl && !uploadedImagePreview && (
               <div className="mt-2">
                 <p className="block text-sm font-medium text-slate-300 mb-2">Image Preview</p>
                 <img src={imageUrl} alt="Component Preview" className="rounded-lg w-full h-auto max-h-32 object-contain bg-slate-700 p-2"/>
               </div>
             )}
 
-            <div className="flex justify-end gap-4 pt-4">
-              <button type="button" onClick={onClose} className="py-2 px-4 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition">Cancel</button>
-              <button type="submit" className="py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-600/30 transition">Add Component</button>
+            <div className="flex justify-end gap-4 pt-4 mt-4 border-t border-slate-700">
+              <button type="button" onClick={onClose} className="py-2 px-4 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition duration-300">Cancel</button>
+              <button type="submit" className="py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-600/30 transition duration-300">Add Component</button>
             </div>
           </form>
         </div>
       </div>
       {isCameraOpen && (
-        <CameraCaptureModal 
+        <CameraCaptureModal
           onClose={() => setIsCameraOpen(false)}
           onCapture={handleCaptureImage}
         />

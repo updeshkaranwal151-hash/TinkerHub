@@ -1,9 +1,5 @@
 import { Category } from '../types.ts';
-
-export interface ImageData {
-  name: string;
-  url: string;
-}
+import type { ImageData } from '../types.ts';
 
 export const imageLibrary: Record<Category, ImageData[]> = {
   [Category.MICROCONTROLLER]: [
