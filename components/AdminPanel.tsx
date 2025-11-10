@@ -1,13 +1,7 @@
-
-
-
-
-
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Category } from '../types.ts';
 import type { ImageData, BackupData, AnalyticsData, Component, Project } from '../types.ts';
-import * as apiService from '../services/apiService.ts';
+import * as localStorageService from '../services/localStorageService.ts'; // Changed from apiService
 import * as customImageService from '../services/customImageService';
 import { UploadIcon, TrashIcon, EditIcon, EyeIcon, UsersIcon, CheckCircleIcon, DashboardIcon, ImageIcon, HardDriveIcon, ExportIcon, ImportIcon, ChartBarIcon, WarningIcon, ProjectIcon as ProjectIconSvg, DatabaseIcon } from './Icons.tsx';
 import EditImageModal from './EditImageModal.tsx';
@@ -42,9 +36,9 @@ const DashboardView: React.FC = () => {
             setIsLoading(true);
             try {
                 const [components, projects, analytics] = await Promise.all([
-                    apiService.getComponents(),
-                    apiService.getProjects(),
-                    apiService.getAnalyticsData(),
+                    localStorageService.getComponents(), // Changed from apiService
+                    localStorageService.getProjects(),   // Changed from apiService
+                    localStorageService.getAnalyticsData(), // Changed from apiService
                 ]);
                 
                 const totalComponentUnits = components.reduce((sum, c) => sum + c.totalQuantity, 0);
@@ -297,7 +291,7 @@ const DataManagementView: React.FC<Pick<AdminPanelProps, 'onClearAllComponents' 
 
     const handleExport = async () => {
         try {
-            const backupData = await apiService.exportData();
+            const backupData = await localStorageService.exportData(); // Changed from apiService
             const jsonData = JSON.stringify(backupData, null, 2);
             const blob = new Blob([jsonData], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -310,7 +304,7 @@ const DataManagementView: React.FC<Pick<AdminPanelProps, 'onClearAllComponents' 
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
         } catch (error) {
-            alert("Failed to export data from server.");
+            alert("Failed to export data from local storage.");
             console.error(error);
         }
     };
@@ -323,7 +317,7 @@ const DataManagementView: React.FC<Pick<AdminPanelProps, 'onClearAllComponents' 
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (!confirm("Are you sure you want to import this file? This will OVERWRITE all existing components and projects on the server.")) {
+        if (!confirm("Are you sure you want to import this file? This will OVERWRITE all existing components and projects in local storage.")) {
             if (fileInputRef.current) fileInputRef.current.value = "";
             return;
         }
@@ -333,7 +327,7 @@ const DataManagementView: React.FC<Pick<AdminPanelProps, 'onClearAllComponents' 
             try {
                 const jsonString = event.target?.result as string;
                 const data: BackupData = JSON.parse(jsonString);
-                await apiService.importData(data);
+                await localStorageService.importData(data); // Changed from apiService
                 alert("Data imported successfully!");
                 onDataRestored();
             } catch (error: any) {
@@ -348,7 +342,7 @@ const DataManagementView: React.FC<Pick<AdminPanelProps, 'onClearAllComponents' 
     const handleResetAnalytics = async () => {
         if (confirm("Are you sure you want to reset all analytics data? This cannot be undone.")) {
             try {
-                await apiService.resetAnalyticsData();
+                await localStorageService.resetAnalyticsData(); // Changed from apiService
                 onDataRestored(); // Trigger a refresh to show updated data
                 alert("Analytics data has been reset.");
             } catch (error) {

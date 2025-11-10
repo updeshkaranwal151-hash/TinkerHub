@@ -1,8 +1,16 @@
-
 import { AISuggestions } from '../types.ts';
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+
+const getGeminiClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error('API_KEY environment variable is not configured.');
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 /**
- * Sends a query to the AI Lab Assistant backend function.
+ * Sends a query to the AI Lab Assistant via Gemini API.
  * @param {string} prompt - The user's question.
  * @param {string} context - The stringified JSON of the current component inventory.
  * @param {'fast' | 'deep'} mode - The requested processing mode for the AI.
@@ -19,29 +27,22 @@ export const askAILabAssistant = async (
   imageMimeType?: string
 ): Promise<string> => {
   try {
-    const response = await fetch('/api/gemini', { // Use the new backend endpoint
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        type: 'assistant', 
-        prompt, 
-        context, 
-        mode,
-        imageBase64,
-        imageMimeType,
-      }),
+    const ai = getGeminiClient();
+    const modelName = mode === 'deep' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+    let contents: any = [{ text: `Context:\n${context}\n\nQuestion:\n${prompt}` }];
+    
+    if (imageBase64 && imageMimeType) {
+        contents.push({ inlineData: { mimeType: imageMimeType, data: imageBase64 } });
+    }
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: modelName,
+        contents: { parts: contents },
+        config: {
+            systemInstruction: "You are a helpful lab assistant for an Atal Tinkering Lab. Your name is Tinker. Provide concise, helpful, and safe advice. You have access to the current inventory context. Use it to answer questions accurately. If asked for code, provide it in a markdown block.",
+        }
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: `Request failed with status ${response.status}` }));
-      throw new Error(errorData.error || `An unknown server error occurred.`);
-    }
-
-    const data = await response.json();
-    if (!data.result) {
-        throw new Error(`The AI assistant could not provide a response.`);
-    }
-    return data.result;
+    return response.text;
   } catch (error: any) {
     console.error("AI Assistant call failed:", error);
     throw new Error(error.message || 'Failed to get a response from the assistant.');
@@ -49,7 +50,7 @@ export const askAILabAssistant = async (
 };
 
 /**
- * Sends an image to the backend to be identified and counted by the Gemini API.
+ * Sends an image to the Gemini API to be identified and counted.
  * @param {string} imageBase64 - Base64 encoded string of the image.
  * @param {string} imageMimeType - The MIME type of the image.
  * @returns {Promise<AISuggestions[]>} A promise that resolves to the AI's analysis as an array of suggestions.
@@ -60,26 +61,37 @@ export const analyzeAndCountComponents = async (
   imageMimeType: string
 ): Promise<AISuggestions[]> => {
   try {
-    const response = await fetch('/api/gemini', { // Use the new backend endpoint
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'analyzeAndCount',
-        imageBase64,
-        imageMimeType,
-      }),
+    const ai = getGeminiClient();
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: {
+            parts: [
+                { text: "Analyze the image to identify all electronic components. For each distinct component type, provide its name, a brief description, count, and suggest a category. Return a JSON array of objects. Use only the following categories: Microcontroller, Sensor, Motor, Display, Power Supply, General Component." },
+                { inlineData: { mimeType: imageMimeType, data: imageBase64 } }
+            ]
+        },
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        name: { type: Type.STRING },
+                        description: { type: Type.STRING },
+                        quantity: { type: Type.NUMBER },
+                        category: {
+                            type: Type.STRING,
+                            enum: ['Microcontroller', 'Sensor', 'Motor', 'Display', 'Power Supply', 'General Component']
+                        }
+                    },
+                    required: ['name', 'description', 'quantity', 'category']
+                }
+            }
+        }
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: `Request failed with status ${response.status}` }));
-      throw new Error(errorData.error || `An unknown server error occurred.`);
-    }
-
-    const data = await response.json();
-    if (!data.result) {
-      throw new Error("The AI could not analyze the components.");
-    }
-    return data.result as AISuggestions[];
+    const parsed = JSON.parse(response.text.trim());
+    return parsed as AISuggestions[];
   } catch (error: any) {
     console.error("Component analysis call failed:", error);
     throw new Error(error.message || 'Failed to get a response from the analysis service.');

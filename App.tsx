@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Component, IssueRecord, Category, Project, MaintenanceRecord, AISuggestions, ImageData } from './types.ts';
 import Header from './components/Header.tsx';
@@ -12,7 +8,7 @@ import IssueComponentModal from './components/IssueComponentModal.tsx';
 import ShareModal from './components/ShareModal.tsx';
 import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon, AIAssistantIcon, EmptyStateIcon, ProjectIcon, WarningIcon } from './components/Icons.tsx';
 import PasswordProtection from './components/PasswordProtection.tsx';
-import * as apiService from './services/apiService.ts';
+import * as localStorageService from './services/localStorageService.ts'; // Changed from apiService
 import AILabAssistantModal from './components/AILabAssistantModal.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
 import { imageLibrary as defaultImageLibrary } from './components/imageLibrary.ts';
@@ -88,7 +84,7 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    apiService.trackVisit();
+    localStorageService.trackVisit();
   }, []);
 
   useEffect(() => {
@@ -105,14 +101,14 @@ const App: React.FC = () => {
     setIsLoading(true);
     try {
         const [componentsData, projectsData] = await Promise.all([
-            apiService.getComponents(),
-            apiService.getProjects(),
+            localStorageService.getComponents(),
+            localStorageService.getProjects(),
         ]);
         setComponents(componentsData);
         setProjects(projectsData);
     } catch (err) {
-        console.error("Error fetching data from API:", err);
-        alert("Could not load data from the server. Please check your connection and try again.");
+        console.error("Error fetching data from local storage:", err);
+        alert("Could not load data. Please try again.");
     } finally {
         setTimeout(() => setIsLoading(false), 300);
     }
@@ -136,7 +132,7 @@ const App: React.FC = () => {
       setIsAssistantModalOpen(true);
   };
 
-  // FIX: Added default values for isUnderMaintenance and maintenanceLog to match the expected type for apiService.addComponent.
+  // FIX: Added default values for isUnderMaintenance and maintenanceLog to match the expected type for localStorageService.addComponent.
   const handleAddComponent = async (newComponent: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>) => {
     try {
         const componentToAdd: Omit<Component, 'id' | 'createdAt'> = {
@@ -144,7 +140,7 @@ const App: React.FC = () => {
             isUnderMaintenance: false,
             maintenanceLog: [],
         };
-        const addedComponent = await apiService.addComponent(componentToAdd);
+        const addedComponent = await localStorageService.addComponent(componentToAdd);
         setComponents(prev => [addedComponent, ...prev]);
         setIsAddModalOpen(false);
     } catch (err) {
@@ -154,7 +150,7 @@ const App: React.FC = () => {
   
   const handleAddMultipleComponents = async (componentsToAdd: Omit<Component, 'id' | 'createdAt'>[]) => {
     try {
-        const addedComponents = await apiService.addMultipleComponents(componentsToAdd);
+        const addedComponents = await localStorageService.addMultipleComponents(componentsToAdd);
         setComponents(prev => [...addedComponents, ...prev]);
         setIsAssistantModalOpen(false); // Close AI modal on success
     } catch (err) {
@@ -166,7 +162,7 @@ const App: React.FC = () => {
   const handleDeleteComponent = async (id: string) => {
     if(window.confirm('Are you sure you want to delete this component? This action cannot be undone.')) {
         try {
-            await apiService.deleteComponent(id);
+            await localStorageService.deleteComponent(id);
             setComponents(prev => prev.filter(c => c.id !== id));
         } catch(err) {
             alert("Failed to delete component.");
@@ -186,7 +182,7 @@ const App: React.FC = () => {
 
   const handleUpdateComponent = async (updatedComponent: Component) => {
     try {
-        const returnedComponent = await apiService.updateComponent(updatedComponent);
+        const returnedComponent = await localStorageService.updateComponent(updatedComponent);
         setComponents(prev =>
             prev.map(c => (c.id === returnedComponent.id ? returnedComponent : c))
         );
@@ -238,7 +234,7 @@ const App: React.FC = () => {
   const handleClearAllComponents = async () => {
     if (window.confirm('Are you sure you want to delete ALL components? This action cannot be undone.')) {
         try {
-            await apiService.clearAllComponents();
+            await localStorageService.clearAllComponents();
             setComponents([]);
         } catch (err) {
             alert("Failed to clear components.");
@@ -249,7 +245,7 @@ const App: React.FC = () => {
   const handleClearAllProjects = async () => {
     if (window.confirm('Are you sure you want to delete ALL projects? This action cannot be undone.')) {
         try {
-            await apiService.clearAllProjects();
+            await localStorageService.clearAllProjects();
             setProjects([]);
             if (viewMode === 'projects') {
               setSelectedProject(null);
@@ -269,7 +265,7 @@ const App: React.FC = () => {
       const component = components.find(c => c.id === componentId);
       if(!component) return;
       const updatedComponent = { ...component, isUnderMaintenance: !component.isUnderMaintenance };
-      const returnedComponent = await apiService.updateComponent(updatedComponent);
+      const returnedComponent = await localStorageService.updateComponent(updatedComponent);
       setComponents(prev => prev.map(c => c.id === componentId ? returnedComponent : c));
       setComponentForMaintenance(returnedComponent);
   };
@@ -279,7 +275,7 @@ const App: React.FC = () => {
       if(!component) return;
       const newLog: MaintenanceRecord = { id: crypto.randomUUID(), date: new Date().toISOString(), notes };
       const updatedComponent = { ...component, maintenanceLog: [newLog, ...component.maintenanceLog] };
-      const returnedComponent = await apiService.updateComponent(updatedComponent);
+      const returnedComponent = await localStorageService.updateComponent(updatedComponent);
       setComponents(prev => prev.map(c => c.id === componentId ? returnedComponent : c));
       setComponentForMaintenance(returnedComponent);
   };
@@ -288,14 +284,14 @@ const App: React.FC = () => {
       const component = components.find(c => c.id === componentId);
       if(!component) return;
       const updatedComponent = { ...component, maintenanceLog: component.maintenanceLog.filter(log => log.id !== logId) };
-      const returnedComponent = await apiService.updateComponent(updatedComponent);
+      const returnedComponent = await localStorageService.updateComponent(updatedComponent);
       setComponents(prev => prev.map(c => c.id === componentId ? returnedComponent : c));
       setComponentForMaintenance(returnedComponent);
   };
 
   const handleAddProject = async (newProjectData: Omit<Project, 'id' | 'createdAt'>) => {
       try {
-          const newProject = await apiService.addProject(newProjectData);
+          const newProject = await localStorageService.addProject(newProjectData);
           setProjects(prev => [newProject, ...prev]);
           setIsProjectModalOpen(false);
       } catch (err) {
@@ -305,7 +301,7 @@ const App: React.FC = () => {
 
   const handleUpdateProject = async (updatedProjectData: Project) => {
       try {
-          const returnedProject = await apiService.updateProject(updatedProjectData);
+          const returnedProject = await localStorageService.updateProject(updatedProjectData);
           setProjects(projects.map(p => p.id === returnedProject.id ? returnedProject : p));
           if(selectedProject?.id === returnedProject.id) {
             setSelectedProject(returnedProject);
@@ -320,7 +316,7 @@ const App: React.FC = () => {
   const handleDeleteProject = async (projectId: string) => {
       if (window.confirm('Are you sure you want to delete this project?')) {
           try {
-              await apiService.deleteProject(projectId);
+              await localStorageService.deleteProject(projectId);
               setProjects(prev => prev.filter(p => p.id !== projectId));
               setSelectedProject(null);
           } catch (err) {
@@ -382,7 +378,7 @@ const App: React.FC = () => {
 
   const handleImportComponents = async (importedComponents: Omit<Component, 'id' | 'createdAt'>[]): Promise<void> => {
       try {
-          const newComponents = await apiService.addMultipleComponents(importedComponents);
+          const newComponents = await localStorageService.addMultipleComponents(importedComponents);
           setComponents(prev => [...newComponents, ...prev]);
           setIsImportModalOpen(false);
           alert(`${newComponents.length} components were successfully imported!`);
@@ -437,7 +433,7 @@ const App: React.FC = () => {
   }
 
   const handleLogin = (isAdminLogin: boolean) => {
-      apiService.trackLogin();
+      localStorageService.trackLogin();
       setIsAuthenticated(true);
       if(isAdminLogin) {
           setIsAdmin(true);

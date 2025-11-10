@@ -1,9 +1,7 @@
 
-
-
-
 import React, { useMemo } from 'react';
-import * as apiService from '../services/apiService';
+// FIX: Replaced apiService with localStorageService as apiService.ts is empty and localStorageService.ts is the correct service for data operations.
+import * as localStorageService from '../services/localStorageService.ts';
 import { Logo } from './Logo.tsx';
 
 interface PasswordProtectionProps {
@@ -53,12 +51,14 @@ const AnimatedBackground: React.FC = () => {
 const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onSuccess, onAdminSuccess }) => {
   
   const handleUserLogin = () => {
-    apiService.trackLogin();
+    // FIX: Replaced apiService.trackLogin with localStorageService.trackLogin
+    localStorageService.trackLogin();
     onSuccess();
   };
 
   const handleAdminLogin = () => {
-    apiService.trackLogin();
+    // FIX: Replaced apiService.trackLogin with localStorageService.trackLogin
+    localStorageService.trackLogin();
     onAdminSuccess();
   };
 
