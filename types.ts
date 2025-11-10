@@ -80,4 +80,5 @@ export interface AISuggestions {
   name: string;
   description: string;
   category: Category;
+  quantity: number;
 }

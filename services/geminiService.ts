@@ -48,22 +48,22 @@ export const askAILabAssistant = async (
 };
 
 /**
- * Sends an image to the backend to be identified by the Gemini API.
+ * Sends an image to the backend to be identified and counted by the Gemini API.
  * @param {string} imageBase64 - Base64 encoded string of the image.
  * @param {string} imageMimeType - The MIME type of the image.
- * @returns {Promise<AISuggestions>} A promise that resolves to the AI's identification.
+ * @returns {Promise<AISuggestions[]>} A promise that resolves to the AI's analysis as an array of suggestions.
  * @throws {Error} Throws an error if the API call fails.
  */
-export const identifyComponentFromImage = async (
+export const analyzeAndCountComponents = async (
   imageBase64: string,
   imageMimeType: string
-): Promise<AISuggestions> => {
+): Promise<AISuggestions[]> => {
   try {
     const response = await fetch('/geminiService', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        type: 'identify',
+        type: 'analyzeAndCount',
         imageBase64,
         imageMimeType,
       }),
@@ -76,11 +76,11 @@ export const identifyComponentFromImage = async (
 
     const data = await response.json();
     if (!data.result) {
-      throw new Error("The AI could not identify the component.");
+      throw new Error("The AI could not analyze the components.");
     }
-    return data.result as AISuggestions;
+    return data.result as AISuggestions[];
   } catch (error: any) {
-    console.error("Component identification call failed:", error);
-    throw new Error(error.message || 'Failed to get a response from the identification service.');
+    console.error("Component analysis call failed:", error);
+    throw new Error(error.message || 'Failed to get a response from the analysis service.');
   }
 };

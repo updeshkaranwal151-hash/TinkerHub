@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Component, IssueRecord, Category, Project, MaintenanceRecord, AISuggestions } from './types.ts';
 import Header from './components/Header.tsx';
@@ -80,9 +76,8 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('inventory');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  const [aiSuggestions, setAiSuggestions] = useState<AISuggestions | null>(null);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-
+  const [imageForAssistant, setImageForAssistant] = useState<string | null>(null);
+  
   const [isLightMode, setIsLightMode] = useState<boolean>(() => {
     return localStorage.getItem('theme') === 'light';
   });
@@ -123,23 +118,15 @@ const App: React.FC = () => {
     }
   }, [isAuthenticated, isAdmin]);
 
-  const clearAiData = () => {
-    setAiSuggestions(null);
-    setCapturedImage(null);
-  };
-
   const handleOpenScanner = () => {
-      clearAiData();
       setIsScannerModalOpen(true);
   };
 
-  const handleComponentIdentified = (suggestions: AISuggestions, imageDataUrl: string) => {
-      setAiSuggestions(suggestions);
-      setCapturedImage(imageDataUrl);
+  const handleImageScanned = (imageDataUrl: string) => {
       setIsScannerModalOpen(false);
-      setIsAddModalOpen(true);
+      setImageForAssistant(imageDataUrl);
+      setIsAssistantModalOpen(true);
   };
-
 
   const handleAddComponent = (newComponent: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>) => {
     try {
@@ -150,6 +137,17 @@ const App: React.FC = () => {
         alert("Error adding component. Please try again.");
     }
   };
+  
+  const handleAddMultipleComponents = (componentsToAdd: Omit<Component, 'id' | 'createdAt'>[]) => {
+    try {
+        const addedComponents = localStorageService.addMultipleComponents(componentsToAdd);
+        setComponents(prev => [...addedComponents, ...prev]);
+        setIsAssistantModalOpen(false); // Close AI modal on success
+    } catch (err) {
+        alert("Error adding components. Please try again.");
+    }
+  };
+
 
   const handleDeleteComponent = (id: string) => {
     if(window.confirm('Are you sure you want to delete this component? This action cannot be undone.')) {
@@ -380,7 +378,7 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen font-sans flex flex-col ${isLightMode ? 'text-slate-900' : 'text-slate-100'}`}>
       <Header 
-        onAddComponent={() => { clearAiData(); setIsAddModalOpen(true); }}
+        onAddComponent={() => setIsAddModalOpen(true)}
         onAddProject={() => { setProjectToEdit(null); setIsProjectModalOpen(true); }}
         onOpenScanner={handleOpenScanner}
         onClearAll={handleClearAllComponents}
@@ -577,14 +575,9 @@ const App: React.FC = () => {
 
       {isAddModalOpen && (
         <AddComponentModal
-          onClose={() => {
-              setIsAddModalOpen(false);
-              clearAiData();
-          }}
+          onClose={() => setIsAddModalOpen(false)}
           onAddComponent={handleAddComponent}
           imageLibrary={imageLibrary}
-          aiSuggestions={aiSuggestions}
-          capturedImage={capturedImage}
         />
       )}
 
@@ -627,8 +620,13 @@ const App: React.FC = () => {
       
       {isAssistantModalOpen && (
         <AILabAssistantModal 
-          onClose={() => setIsAssistantModalOpen(false)}
+          onClose={() => {
+              setIsAssistantModalOpen(false);
+              setImageForAssistant(null);
+          }}
           components={components}
+          initialImageURL={imageForAssistant}
+          onAddMultipleComponents={handleAddMultipleComponents}
         />
       )}
 
@@ -655,7 +653,7 @@ const App: React.FC = () => {
       {isScannerModalOpen && (
         <SmartScannerModal
             onClose={() => setIsScannerModalOpen(false)}
-            onComponentIdentified={handleComponentIdentified}
+            onImageScanned={handleImageScanned}
         />
       )}
 

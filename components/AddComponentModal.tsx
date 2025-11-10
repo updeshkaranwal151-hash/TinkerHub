@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Component, Category, ComponentLink, LinkType, AISuggestions } from '../types.ts';
+import React, { useState, useMemo } from 'react';
+import { Component, Category, ComponentLink, LinkType } from '../types.ts';
 import { componentLibrary } from './componentLibrary.ts';
 import { ImageData } from './imageLibrary.ts';
 import { PlusIcon, TrashIcon, UploadIcon, CameraIcon } from './Icons.tsx';
@@ -10,8 +10,6 @@ interface AddComponentModalProps {
   onClose: () => void;
   onAddComponent: (component: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>) => void;
   imageLibrary: Record<string, ImageData[]>;
-  aiSuggestions?: AISuggestions | null;
-  capturedImage?: string | null;
 }
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -24,7 +22,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 
 
-const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddComponent, imageLibrary, aiSuggestions, capturedImage }) => {
+const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddComponent, imageLibrary }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<Category>(Category.GENERAL);
@@ -38,24 +36,6 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
   const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-
-  useEffect(() => {
-    if (aiSuggestions) {
-      setName(aiSuggestions.name);
-      setDescription(aiSuggestions.description);
-      // Ensure the category suggested by AI is a valid one, otherwise default
-      if (Object.values(Category).includes(aiSuggestions.category)) {
-        setCategory(aiSuggestions.category);
-      } else {
-        setCategory(Category.GENERAL);
-      }
-    }
-    if (capturedImage) {
-      setImageUrl(capturedImage);
-      setUploadedImagePreview(capturedImage); // Display the captured image
-      setUploadedImageFile(null); // It's a data URL, not a file object
-    }
-  }, [aiSuggestions, capturedImage]);
 
   const handleAddLink = () => {
     if (newLinkUrl.trim()) {
@@ -152,14 +132,9 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
           <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">&times;</button>
           <h2 className="text-2xl font-bold mb-6 text-sky-400">Add New Component</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {aiSuggestions && (
-                <div className="bg-indigo-900/50 border border-indigo-700 text-indigo-200 text-sm p-3 rounded-lg mb-4">
-                   ✨ Fields have been pre-filled by AI. Please review and adjust as needed.
-                </div>
-            )}
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-slate-300">
-                Category {aiSuggestions && <span className="text-indigo-400" title="Suggested by AI">✨</span>}
+                Category
               </label>
               <select id="category" value={category} onChange={e => setCategory(e.target.value as Category)} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                 {Object.values(Category).map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -168,7 +143,7 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
 
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-slate-300">
-                Component Name {aiSuggestions && <span className="text-indigo-400" title="Suggested by AI">✨</span>}
+                Component Name
               </label>
               <input 
                 type="text" 
@@ -189,7 +164,7 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
             <div>
               <div className="flex justify-between items-center">
                 <label htmlFor="description" className="block text-sm font-medium text-slate-300">
-                    Description {aiSuggestions && <span className="text-indigo-400" title="Suggested by AI">✨</span>}
+                    Description
                 </label>
                 <button type="button" onClick={() => setDescription(name)} disabled={!name} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:text-slate-500 disabled:cursor-not-allowed">
                     Same as name

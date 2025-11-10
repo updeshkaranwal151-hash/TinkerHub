@@ -3,9 +3,9 @@ import { Category } from '../types.ts';
 
 /**
  * Cloudflare Pages Function to handle POST requests for Gemini API.
- * It expects a JSON body with a `type` of 'assistant' or 'identify'.
+ * It expects a JSON body with a `type` of 'assistant' or 'analyzeAndCount'.
  * - For 'assistant', it requires `prompt`, `context`, `mode`, and optionally image data.
- * - For 'identify', it requires `imageBase64` and `imageMimeType`.
+ * - For 'analyzeAndCount', it requires `imageBase64` and `imageMimeType`.
  * The API key is securely accessed from environment variables.
  * @param {object} context - The Cloudflare function context.
  * @returns {Response} A JSON response with the result or an error.
@@ -52,32 +52,36 @@ export async function onRequestPost(context) {
         headers: { 'Content-Type': 'application/json' },
       });
 
-    } else if (type === 'identify') {
+    } else if (type === 'analyzeAndCount') {
         const { imageBase64, imageMimeType } = body;
         if (!imageBase64 || !imageMimeType) {
-            return new Response(JSON.stringify({ error: 'Image data and MIME type are required for identification.' }), {
+            return new Response(JSON.stringify({ error: 'Image data and MIME type are required for analysis.' }), {
                 status: 400, headers: { 'Content-Type': 'application/json' },
             });
         }
         
         const validCategories = Object.values(Category).join(', ');
-        const identificationPrompt = `Identify this electronic component from the image. Provide its common name, a brief technical description, and classify it into one of the following exact categories: [${validCategories}]. If you are unsure, set the name to 'Unknown Component' and describe what you see.`;
+        const analysisPrompt = `From the provided image, identify every distinct electronic component visible. For each component type, provide its common name, a brief technical description, count the quantity, and classify it into one of the following exact categories: [${validCategories}]. If you are unsure, use 'Unknown Component'. Return the result as a JSON array.`;
 
         const responseSchema = {
-            type: Type.OBJECT,
-            properties: {
-                name: { type: Type.STRING, description: "The common name of the component." },
-                description: { type: Type.STRING, description: "A brief technical description of the component's function." },
-                category: { type: Type.STRING, description: `The component's category, chosen from: [${validCategories}]` },
-            },
-            required: ["name", "description", "category"],
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING, description: "The common name of the component." },
+                    description: { type: Type.STRING, description: "A brief technical description of the component's function." },
+                    category: { type: Type.STRING, description: `The component's category, chosen from: [${validCategories}]` },
+                    quantity: { type: Type.INTEGER, description: "The total count of this specific component in the image." }
+                },
+                required: ["name", "description", "category", "quantity"],
+            }
         };
         
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: {
                 parts: [
-                    { text: identificationPrompt },
+                    { text: analysisPrompt },
                     { inlineData: { data: imageBase64, mimeType: imageMimeType } }
                 ]
             },
@@ -87,14 +91,26 @@ export async function onRequestPost(context) {
             }
         });
         
-        let identifiedData = JSON.parse(response.text);
+        let analysisData = JSON.parse(response.text);
         
-        // Validate category from AI, default if it hallucinates a new one
-        if (!Object.values(Category).includes(identifiedData.category)) {
-            identifiedData.category = Category.GENERAL;
+        // Validate the response from the AI
+        if (!Array.isArray(analysisData)) {
+            if (typeof analysisData === 'object' && analysisData !== null && analysisData.name) {
+                 analysisData = [analysisData];
+            } else {
+                analysisData = [];
+            }
         }
+        
+        // Validate category for each item, default if it hallucinates a new one
+        const validatedData = analysisData.map(item => {
+            if (!Object.values(Category).includes(item.category)) {
+                item.category = Category.GENERAL;
+            }
+            return item;
+        });
 
-        return new Response(JSON.stringify({ result: identifiedData }), {
+        return new Response(JSON.stringify({ result: validatedData }), {
             headers: { 'Content-Type': 'application/json' },
         });
 
