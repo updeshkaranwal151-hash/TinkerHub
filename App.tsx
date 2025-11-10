@@ -1,8 +1,9 @@
 
 
 
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Component, IssueRecord, Category, Project, MaintenanceRecord } from './types.ts';
+import { Component, IssueRecord, Category, Project, MaintenanceRecord, AISuggestions } from './types.ts';
 import Header from './components/Header.tsx';
 import ComponentCard from './components/ComponentCard.tsx';
 import AddComponentModal from './components/AddComponentModal.tsx';
@@ -22,6 +23,7 @@ import MaintenanceModal from './components/MaintenanceModal.tsx';
 import ProjectDetailView from './components/ProjectDetailView.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import SplashScreen from './components/SplashScreen.tsx';
+import SmartScannerModal from './components/SmartScannerModal.tsx';
 
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
@@ -67,6 +69,7 @@ const App: React.FC = () => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [componentToEdit, setComponentToEdit] = useState<Component | null>(null);
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [componentToIssue, setComponentToIssue] = useState<Component | null>(null);
@@ -77,17 +80,17 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('inventory');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestions | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+
   const [isLightMode, setIsLightMode] = useState<boolean>(() => {
-    // Initialize from local storage, default to false (dark mode)
     return localStorage.getItem('theme') === 'light';
   });
 
-  // Track app visit once on initial load for analytics
   useEffect(() => {
     localStorageService.trackVisit();
   }, []);
 
-  // Apply theme to body class
   useEffect(() => {
     if (isLightMode) {
       document.body.classList.add('light-mode');
@@ -102,7 +105,6 @@ const App: React.FC = () => {
     }
   }, [isLightMode]);
 
-  // Load components and projects from Local Storage on first load
   useEffect(() => {
     if (isAuthenticated && !isAdmin) {
         setIsLoading(true);
@@ -113,7 +115,6 @@ const App: React.FC = () => {
             setProjects(projectData);
         } catch (err) {
             console.error("Error fetching data from local storage:", err);
-            alert("Could not load data from local storage.");
         } finally {
             setTimeout(() => setIsLoading(false), 300);
         }
@@ -121,6 +122,23 @@ const App: React.FC = () => {
         setIsLoading(false);
     }
   }, [isAuthenticated, isAdmin]);
+
+  const clearAiData = () => {
+    setAiSuggestions(null);
+    setCapturedImage(null);
+  };
+
+  const handleOpenScanner = () => {
+      clearAiData();
+      setIsScannerModalOpen(true);
+  };
+
+  const handleComponentIdentified = (suggestions: AISuggestions, imageDataUrl: string) => {
+      setAiSuggestions(suggestions);
+      setCapturedImage(imageDataUrl);
+      setIsScannerModalOpen(false);
+      setIsAddModalOpen(true);
+  };
 
 
   const handleAddComponent = (newComponent: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>) => {
@@ -130,19 +148,13 @@ const App: React.FC = () => {
         setIsAddModalOpen(false);
     } catch (err) {
         alert("Error adding component. Please try again.");
-        console.error(err);
     }
   };
 
   const handleDeleteComponent = (id: string) => {
     if(window.confirm('Are you sure you want to delete this component? This action cannot be undone.')) {
-        try {
-            localStorageService.deleteComponent(id);
-            setComponents(prev => prev.filter(c => c.id !== id));
-        } catch (err) {
-            alert("Error deleting component. Please try again.");
-            console.error(err);
-        }
+        localStorageService.deleteComponent(id);
+        setComponents(prev => prev.filter(c => c.id !== id));
     }
   };
 
@@ -157,79 +169,50 @@ const App: React.FC = () => {
   };
 
   const handleUpdateComponent = (updatedComponent: Component) => {
-    try {
-        localStorageService.updateComponent(updatedComponent);
-        setComponents(prev =>
-            prev.map(c => (c.id === updatedComponent.id ? updatedComponent : c))
-        );
-        setIsEditModalOpen(false);
-        setComponentToEdit(null);
-    } catch (err) {
-        alert("Error updating component. Please try again.");
-        console.error(err);
-    }
+    localStorageService.updateComponent(updatedComponent);
+    setComponents(prev =>
+        prev.map(c => (c.id === updatedComponent.id ? updatedComponent : c))
+    );
+    setIsEditModalOpen(false);
+    setComponentToEdit(null);
   };
 
   const handleToggleAvailability = (component: Component) => {
-    try {
-        const updatedComponent = localStorageService.toggleAvailability(component);
-        setComponents(prev =>
-            prev.map(c =>
-                c.id === component.id ? updatedComponent : c
-            )
-        );
-    } catch (err) {
-        alert("Error toggling availability. Please try again.");
-        console.error(err);
-    }
+    const updatedComponent = localStorageService.toggleAvailability(component);
+    setComponents(prev =>
+        prev.map(c =>
+            c.id === component.id ? updatedComponent : c
+        )
+    );
   };
 
   const handleConfirmIssue = (componentId: string, studentName: string, quantity: number) => {
-    try {
-        const updatedComponent = localStorageService.issueComponent(componentId, studentName, quantity);
-         setComponents(prev => 
-            prev.map(c => 
-                c.id === componentId ? updatedComponent : c
-            )
-        );
-        setIsIssueModalOpen(false);
-        setComponentToIssue(null);
-    } catch (err) {
-        alert("Error issuing component. Please try again.");
-        console.error(err);
-    }
+    const updatedComponent = localStorageService.issueComponent(componentId, studentName, quantity);
+     setComponents(prev => 
+        prev.map(c => 
+            c.id === componentId ? updatedComponent : c
+        )
+    );
+    setIsIssueModalOpen(false);
+    setComponentToIssue(null);
   };
 
   const handleReturnIssue = (componentId: string, issueId: string) => {
-     try {
-        const updatedComponent = localStorageService.returnIssue(componentId, issueId);
-        setComponents(prev =>
-            prev.map(c =>
-                c.id === componentId ? updatedComponent : c
-            )
-        );
-    } catch (err) {
-        alert("Error returning component. Please try again.");
-        console.error(err);
-    }
+     const updatedComponent = localStorageService.returnIssue(componentId, issueId);
+    setComponents(prev =>
+        prev.map(c =>
+            c.id === componentId ? updatedComponent : c
+        )
+    );
   };
 
   const handleClearAllComponents = () => {
     if (window.confirm('Are you sure you want to delete ALL components? This action cannot be undone.')) {
-        setIsLoading(true);
-        try {
-            localStorageService.clearAllComponents();
-            setComponents([]);
-        } catch (err) {
-            alert("Error clearing data. Please try again.");
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
+        localStorageService.clearAllComponents();
+        setComponents([]);
     }
   };
   
-  // --- Maintenance Handlers ---
   const handleOpenMaintenanceModal = (component: Component) => {
       setComponentForMaintenance(component);
       setIsMaintenanceModalOpen(true);
@@ -238,23 +221,21 @@ const App: React.FC = () => {
   const handleToggleMaintenance = (componentId: string) => {
       const updatedComponent = localStorageService.toggleMaintenanceStatus(componentId);
       setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
-      setComponentForMaintenance(updatedComponent); // Keep modal in sync
+      setComponentForMaintenance(updatedComponent);
   };
   
   const handleAddMaintenanceLog = (componentId: string, notes: string) => {
       const updatedComponent = localStorageService.addMaintenanceLog(componentId, notes);
       setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
-      setComponentForMaintenance(updatedComponent); // Keep modal in sync
+      setComponentForMaintenance(updatedComponent);
   };
   
   const handleDeleteMaintenanceLog = (componentId: string, logId: string) => {
       const updatedComponent = localStorageService.deleteMaintenanceLog(componentId, logId);
       setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
-      setComponentForMaintenance(updatedComponent); // Keep modal in sync
+      setComponentForMaintenance(updatedComponent);
   };
 
-
-  // --- Project Handlers ---
   const handleAddProject = (newProjectData: Omit<Project, 'id' | 'createdAt'>) => {
       const newProject = localStorageService.addProject(newProjectData);
       setProjects(prev => [newProject, ...prev]);
@@ -263,9 +244,7 @@ const App: React.FC = () => {
 
   const handleUpdateProject = (updatedProjectData: Project) => {
       localStorageService.updateProject(updatedProjectData);
-      const updatedProjects = projects.map(p => p.id === updatedProjectData.id ? updatedProjectData : p);
-      setProjects(updatedProjects);
-      // Also update the selected project if it's the one being edited
+      setProjects(projects.map(p => p.id === updatedProjectData.id ? updatedProjectData : p));
       if(selectedProject?.id === updatedProjectData.id) {
         setSelectedProject(updatedProjectData);
       }
@@ -277,7 +256,7 @@ const App: React.FC = () => {
       if (window.confirm('Are you sure you want to delete this project?')) {
           localStorageService.deleteProject(projectId);
           setProjects(prev => prev.filter(p => p.id !== projectId));
-          setSelectedProject(null); // Close detail view if deleted
+          setSelectedProject(null);
       }
   };
   
@@ -290,13 +269,11 @@ const App: React.FC = () => {
       setSelectedProject(project);
   };
   
-  // --- CSV Handlers ---
   const handleExportCSV = () => {
     if (components.length === 0) {
         alert("There is no inventory data to export.");
         return;
     }
-
     const formatCsvField = (value: any): string => {
         const str = String(value ?? '');
         if (/[",\n]/.test(str)) {
@@ -304,62 +281,42 @@ const App: React.FC = () => {
         }
         return str;
     };
-
-    const headers = [
-        "name", "description", "category", "totalQuantity", 
-        "availableQuantity", "isAvailable", "lowStockThreshold", "imageUrl", "links",
-        "isUnderMaintenance", "maintenanceLog"
-    ];
-
+    const headers = ["name", "description", "category", "totalQuantity", "imageUrl", "lowStockThreshold", "links", "isUnderMaintenance", "maintenanceLog"];
     const csvRows = [headers.join(',')];
-
     for (const component of components) {
-        const availableQuantity = component.totalQuantity - (component.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0);
         const linksJson = component.links ? JSON.stringify(component.links) : '';
         const maintenanceLogJson = component.maintenanceLog ? JSON.stringify(component.maintenanceLog) : '';
-
         const values = [
             formatCsvField(component.name),
             formatCsvField(component.description),
             formatCsvField(component.category),
             component.totalQuantity,
-            availableQuantity,
-            component.isAvailable,
-            component.lowStockThreshold ?? '',
             formatCsvField(component.imageUrl),
+            component.lowStockThreshold ?? '',
             formatCsvField(linksJson),
             component.isUnderMaintenance,
             formatCsvField(maintenanceLogJson),
         ];
         csvRows.push(values.join(','));
     }
-
     const csvString = csvRows.join('\n');
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    
     const date = new Date().toISOString().slice(0, 10);
     link.setAttribute("download", `tinkerhub-inventory-export-${date}.csv`);
-    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleImportComponents = (importedComponents: Omit<Component, 'id' | 'createdAt'>[]): void => {
-      try {
-          const newComponents = localStorageService.addMultipleComponents(importedComponents);
-          setComponents(prev => [...newComponents, ...prev]);
-          setIsImportModalOpen(false);
-          alert(`${newComponents.length} components were successfully imported!`);
-      } catch (err) {
-          alert("Error importing components. Please check your file and try again.");
-          console.error(err);
-      }
+      const newComponents = localStorageService.addMultipleComponents(importedComponents);
+      setComponents(prev => [...newComponents, ...prev]);
+      setIsImportModalOpen(false);
+      alert(`${newComponents.length} components were successfully imported!`);
   };
-
 
   const filteredComponents = useMemo(() => components.filter(component => {
     const matchesSearch = component.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -409,10 +366,7 @@ const App: React.FC = () => {
   if (!isAuthenticated) {
     return <PasswordProtection 
         onSuccess={() => setIsAuthenticated(true)}
-        onAdminSuccess={() => {
-            setIsAuthenticated(true);
-            setIsAdmin(true);
-        }}
+        onAdminSuccess={() => { setIsAuthenticated(true); setIsAdmin(true); }}
     />;
   }
 
@@ -426,8 +380,9 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen font-sans flex flex-col ${isLightMode ? 'text-slate-900' : 'text-slate-100'}`}>
       <Header 
-        onAddComponent={() => setIsAddModalOpen(true)}
+        onAddComponent={() => { clearAiData(); setIsAddModalOpen(true); }}
         onAddProject={() => { setProjectToEdit(null); setIsProjectModalOpen(true); }}
+        onOpenScanner={handleOpenScanner}
         onClearAll={handleClearAllComponents}
         onOpenShareModal={() => setIsShareModalOpen(true)}
         onOpenImportModal={() => setIsImportModalOpen(true)}
@@ -481,7 +436,7 @@ const App: React.FC = () => {
                           placeholder="Search by component name..."
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
-                          className="w-full bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          className="w-full bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           aria-label="Search components"
                       />
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -491,7 +446,7 @@ const App: React.FC = () => {
                   <select
                       value={categoryFilter}
                       onChange={e => setCategoryFilter(e.target.value as Category | 'all')}
-                      className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       aria-label="Filter by category"
                   >
                       <option value="all">All Categories</option>
@@ -504,7 +459,7 @@ const App: React.FC = () => {
                     <select
                         value={sortConfig.key}
                         onChange={e => setSortConfig({ ...sortConfig, key: e.target.value as SortKey })}
-                        className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         aria-label="Sort by"
                     >
                         <option value="default">Default Sort</option>
@@ -515,7 +470,7 @@ const App: React.FC = () => {
                     <button
                         onClick={() => setSortConfig({ ...sortConfig, direction: sortConfig.direction === 'ascending' ? 'descending' : 'ascending' })}
                         disabled={sortConfig.key === 'default'}
-                        className="p-2 bg-slate-800 border border-slate-700 rounded-md shadow-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 bg-slate-800 border border-slate-700 rounded-md shadow-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
                         aria-label={`Sort ${sortConfig.direction === 'ascending' ? 'descending' : 'ascending'}`}
                     >
                         {sortConfig.direction === 'ascending' ? <ArrowUpIcon /> : <ArrowDownIcon />}
@@ -526,7 +481,6 @@ const App: React.FC = () => {
             {isLoading ? (
                 <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
                     <h3 className="text-xl font-semibold text-slate-300 animate-pulse">Loading Inventory...</h3>
-                    <p className="text-slate-500 mt-2">Please wait while we fetch the data.</p>
                 </div>
             ) : components.length > 0 ? (
                 sortedAndFilteredComponents.length > 0 ? (
@@ -560,7 +514,7 @@ const App: React.FC = () => {
                     <p className="text-slate-400 mt-2">Let's add your first component to get started.</p>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg shadow-indigo-600/30 transform hover:scale-105"
+                        className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-indigo-600/30 transform hover:scale-105"
                     >
                         <PlusIcon />
                         Add Your First Component
@@ -609,7 +563,7 @@ const App: React.FC = () => {
                       <p className="text-slate-400 mt-2">Create your first project to showcase your innovation.</p>
                       <button
                           onClick={() => { setProjectToEdit(null); setIsProjectModalOpen(true); }}
-                          className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg shadow-indigo-600/30 transform hover:scale-105"
+                          className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-indigo-600/30 transform hover:scale-105"
                       >
                           <PlusIcon />
                           Create Your First Project
@@ -623,9 +577,14 @@ const App: React.FC = () => {
 
       {isAddModalOpen && (
         <AddComponentModal
-          onClose={() => setIsAddModalOpen(false)}
+          onClose={() => {
+              setIsAddModalOpen(false);
+              clearAiData();
+          }}
           onAddComponent={handleAddComponent}
           imageLibrary={imageLibrary}
+          aiSuggestions={aiSuggestions}
+          capturedImage={capturedImage}
         />
       )}
 
@@ -692,7 +651,13 @@ const App: React.FC = () => {
             onDeleteLog={handleDeleteMaintenanceLog}
         />
       )}
-
+      
+      {isScannerModalOpen && (
+        <SmartScannerModal
+            onClose={() => setIsScannerModalOpen(false)}
+            onComponentIdentified={handleComponentIdentified}
+        />
+      )}
 
       <button
         onClick={() => setIsAssistantModalOpen(true)}

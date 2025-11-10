@@ -1,12 +1,13 @@
 
 
 import React, { useState, useEffect, useRef } from 'react';
-import { PlusIcon, TrashIcon, ShareIcon, ImportIcon, ExportIcon, SunIcon, MoonIcon, MoreIcon } from './Icons.tsx';
+import { PlusIcon, TrashIcon, ShareIcon, ImportIcon, ExportIcon, SunIcon, MoonIcon, MoreIcon, ScanIcon } from './Icons.tsx';
 import { Logo } from './Logo.tsx';
 
 interface HeaderProps {
     onAddComponent: () => void;
     onAddProject: () => void;
+    onOpenScanner: () => void;
     onClearAll: () => void;
     onOpenShareModal: () => void;
     onOpenImportModal: () => void;
@@ -18,7 +19,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ 
     onAddComponent, onAddProject, onClearAll, onOpenShareModal, viewMode, 
-    onOpenImportModal, onExport, isLightMode, onToggleLightMode
+    onOpenImportModal, onExport, isLightMode, onToggleLightMode, onOpenScanner
 }) => {
   const isInventoryView = viewMode === 'inventory';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -69,6 +70,16 @@ const Header: React.FC<HeaderProps> = ({
             >
                 {isLightMode ? <MoonIcon /> : <SunIcon />}
             </button>
+            {isInventoryView && (
+                <button
+                    onClick={onOpenScanner}
+                    className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition duration-300 shadow-lg shadow-sky-600/30"
+                    title="Scan Component with AI"
+                >
+                    <ScanIcon />
+                    <span className="hidden sm:inline">Scan</span>
+                </button>
+            )}
           <button
             onClick={isInventoryView ? onAddComponent : onAddProject}
             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition duration-300 shadow-lg shadow-indigo-600/30"
@@ -100,7 +111,7 @@ const Header: React.FC<HeaderProps> = ({
             </button>
              <button
               onClick={onOpenShareModal}
-              className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 shadow-lg shadow-sky-600/30"
+              className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition"
               aria-label="Share this app"
             >
               <ShareIcon />

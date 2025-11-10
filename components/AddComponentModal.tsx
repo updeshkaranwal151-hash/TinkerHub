@@ -1,7 +1,6 @@
 
-
-import React, { useState, useMemo } from 'react';
-import { Component, Category, ComponentLink, LinkType } from '../types.ts';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Component, Category, ComponentLink, LinkType, AISuggestions } from '../types.ts';
 import { componentLibrary } from './componentLibrary.ts';
 import { ImageData } from './imageLibrary.ts';
 import { PlusIcon, TrashIcon, UploadIcon, CameraIcon } from './Icons.tsx';
@@ -11,9 +10,10 @@ interface AddComponentModalProps {
   onClose: () => void;
   onAddComponent: (component: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>) => void;
   imageLibrary: Record<string, ImageData[]>;
+  aiSuggestions?: AISuggestions | null;
+  capturedImage?: string | null;
 }
 
-// Helper to convert File to Base64
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -24,12 +24,12 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 
 
-const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddComponent, imageLibrary }) => {
+const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddComponent, imageLibrary, aiSuggestions, capturedImage }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<Category>(Category.GENERAL);
   const [totalQuantity, setTotalQuantity] = useState('1');
-  const [imageUrl, setImageUrl] = useState(''); // Stores URL from library OR Base64 from upload
+  const [imageUrl, setImageUrl] = useState('');
   const [lowStockThreshold, setLowStockThreshold] = useState('');
   const [links, setLinks] = useState<ComponentLink[]>([]);
   const [newLinkUrl, setNewLinkUrl] = useState('');
@@ -39,10 +39,28 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
+  useEffect(() => {
+    if (aiSuggestions) {
+      setName(aiSuggestions.name);
+      setDescription(aiSuggestions.description);
+      // Ensure the category suggested by AI is a valid one, otherwise default
+      if (Object.values(Category).includes(aiSuggestions.category)) {
+        setCategory(aiSuggestions.category);
+      } else {
+        setCategory(Category.GENERAL);
+      }
+    }
+    if (capturedImage) {
+      setImageUrl(capturedImage);
+      setUploadedImagePreview(capturedImage); // Display the captured image
+      setUploadedImageFile(null); // It's a data URL, not a file object
+    }
+  }, [aiSuggestions, capturedImage]);
+
   const handleAddLink = () => {
     if (newLinkUrl.trim()) {
       try {
-        new URL(newLinkUrl); // Validate URL format
+        new URL(newLinkUrl);
         setLinks([...links, { type: newLinkType, url: newLinkUrl.trim() }]);
         setNewLinkUrl('');
       } catch (_) {
@@ -82,13 +100,11 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
     const categoryImages = imageLibrary[category] || [];
     const generalImages = imageLibrary[Category.GENERAL] || [];
     const combined = [...categoryImages, ...generalImages];
-    // Remove duplicates by URL, keeping the first occurrence
     return Array.from(new Map(combined.map(item => [item.url, item])).values());
   }, [category, imageLibrary]);
 
   const handleSelectLibraryImage = (url: string) => {
     setImageUrl(url);
-    // Clear any uploaded image when a library image is selected
     setUploadedImageFile(null);
     setUploadedImagePreview(null);
     const fileInput = document.getElementById('image-upload-input-add') as HTMLInputElement;
@@ -102,19 +118,19 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
       const preview = URL.createObjectURL(file);
       setUploadedImagePreview(preview);
       const base64 = await fileToBase64(file);
-      setImageUrl(base64); // Set the Base64 as the main imageUrl
+      setImageUrl(base64);
     } else {
       setUploadedImageFile(null);
       setUploadedImagePreview(null);
       setImageUrl('');
-      if (file) alert('Please select a valid image file (PNG, JPEG, WEBP, GIF).');
+      if (file) alert('Please select a valid image file.');
     }
   };
 
   const handleClearUploadedImage = () => {
     setUploadedImageFile(null);
     setUploadedImagePreview(null);
-    setImageUrl(''); // Clear the main imageUrl if it was the uploaded one
+    setImageUrl('');
     const fileInput = document.getElementById('image-upload-input-add') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
@@ -136,15 +152,24 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
           <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">&times;</button>
           <h2 className="text-2xl font-bold mb-6 text-sky-400">Add New Component</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {aiSuggestions && (
+                <div className="bg-indigo-900/50 border border-indigo-700 text-indigo-200 text-sm p-3 rounded-lg mb-4">
+                   ✨ Fields have been pre-filled by AI. Please review and adjust as needed.
+                </div>
+            )}
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-slate-300">Category</label>
+              <label htmlFor="category" className="block text-sm font-medium text-slate-300">
+                Category {aiSuggestions && <span className="text-indigo-400" title="Suggested by AI">✨</span>}
+              </label>
               <select id="category" value={category} onChange={e => setCategory(e.target.value as Category)} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                 {Object.values(Category).map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
 
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-300">Component Name</label>
+              <label htmlFor="name" className="block text-sm font-medium text-slate-300">
+                Component Name {aiSuggestions && <span className="text-indigo-400" title="Suggested by AI">✨</span>}
+              </label>
               <input 
                 type="text" 
                 id="name" 
@@ -163,7 +188,9 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
 
             <div>
               <div className="flex justify-between items-center">
-                <label htmlFor="description" className="block text-sm font-medium text-slate-300">Description</label>
+                <label htmlFor="description" className="block text-sm font-medium text-slate-300">
+                    Description {aiSuggestions && <span className="text-indigo-400" title="Suggested by AI">✨</span>}
+                </label>
                 <button type="button" onClick={() => setDescription(name)} disabled={!name} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:text-slate-500 disabled:cursor-not-allowed">
                     Same as name
                 </button>
@@ -182,7 +209,7 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300">Reference Links (Datasheets, Tutorials, etc.)</label>
+              <label className="block text-sm font-medium text-slate-300">Reference Links</label>
               <div className="space-y-2 mt-2">
                   {links.map((link, index) => (
                       <div key={index} className="flex items-center gap-2 bg-slate-700/50 p-2 rounded-md">
@@ -207,52 +234,46 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
 
             <div>
               <label className="block text-sm font-medium text-slate-300">Component Image</label>
-              <div className="mt-2 mb-4 p-3 bg-slate-900/50 border border-slate-600 rounded-lg">
-                  <p className="text-sm font-medium text-slate-200 mb-2">Add an Image</p>
-                  <div className="flex items-center gap-3">
-                      <label 
-                          htmlFor="image-upload-input-add" 
-                          className="flex items-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer transition duration-300"
-                      >
-                          <UploadIcon /> Upload
-                          <input 
-                              id="image-upload-input-add"
-                              type="file" 
-                              accept="image/png, image/jpeg, image/webp, image/gif" 
-                              onChange={handleFileUpload} 
-                              className="sr-only" 
-                          />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsCameraOpen(true)}
-                        className="flex items-center gap-2 py-2 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg cursor-pointer transition duration-300"
-                      >
-                        <CameraIcon /> Capture
-                      </button>
-                      {uploadedImagePreview && (
-                          <div className="relative">
-                              <img 
-                                  src={uploadedImagePreview} 
-                                  alt="Uploaded Preview" 
-                                  className="h-16 w-16 object-cover rounded-md border border-slate-500" 
-                              />
-                              <button 
-                                  type="button"
-                                  onClick={handleClearUploadedImage}
-                                  className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 text-xs leading-none"
-                                  aria-label="Remove uploaded image"
-                              >
-                                  <TrashIcon className="h-3 w-3" />
-                              </button>
-                          </div>
-                      )}
-                  </div>
-                  {uploadedImageFile && <p className="text-xs text-slate-400 mt-2">{uploadedImageFile.name}</p>}
-              </div>
-
-              {!uploadedImageFile && (
+              
+              {uploadedImagePreview ? (
+                <div className="mt-2 p-3 bg-slate-900/50 border border-slate-600 rounded-lg">
+                   <div className="relative w-full max-w-xs mx-auto">
+                        <img 
+                            src={uploadedImagePreview} 
+                            alt="Uploaded Preview" 
+                            className="w-full h-auto object-cover rounded-md border border-slate-500" 
+                        />
+                        <button 
+                            type="button"
+                            onClick={handleClearUploadedImage}
+                            className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1"
+                            aria-label="Remove uploaded image"
+                        >
+                            <TrashIcon className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+              ) : (
                 <>
+                  <div className="mt-2 mb-4 p-3 bg-slate-900/50 border border-slate-600 rounded-lg">
+                      <p className="text-sm font-medium text-slate-200 mb-2">Add an Image</p>
+                      <div className="flex items-center gap-3">
+                          <label 
+                              htmlFor="image-upload-input-add" 
+                              className="flex items-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg cursor-pointer"
+                          >
+                              <UploadIcon /> Upload
+                              <input id="image-upload-input-add" type="file" accept="image/*" onChange={handleFileUpload} className="sr-only" />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setIsCameraOpen(true)}
+                            className="flex items-center gap-2 py-2 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg cursor-pointer"
+                          >
+                            <CameraIcon /> Capture
+                          </button>
+                      </div>
+                  </div>
                   <p className="text-sm font-medium text-slate-200 mb-2">Or Choose from Library</p>
                   <div className="mt-2 p-2 bg-slate-900/50 border border-slate-600 rounded-lg max-h-40 overflow-y-auto">
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
@@ -261,15 +282,10 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
                           key={img.url}
                           type="button"
                           onClick={() => handleSelectLibraryImage(img.url)}
-                          className={`relative rounded-lg overflow-hidden border-2 transition-all ${imageUrl === img.url ? 'border-indigo-500 scale-105' : 'border-transparent hover:border-slate-500'}`}
+                          className={`relative rounded-lg overflow-hidden border-2 ${imageUrl === img.url ? 'border-indigo-500 scale-105' : 'border-transparent hover:border-slate-500'}`}
                           title={img.name}
                           >
                           <img src={img.url} alt={img.name} className="w-full h-full object-contain aspect-square bg-slate-700/50 p-1" />
-                          {imageUrl === img.url && (
-                              <div className="absolute inset-0 bg-indigo-500/60 flex items-center justify-center">
-                              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                              </div>
-                          )}
                           </button>
                       ))}
                       </div>
@@ -278,7 +294,7 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
               )}
             </div>
             
-            {imageUrl && !uploadedImagePreview && (
+           {imageUrl && !uploadedImagePreview && (
               <div className="mt-2">
                 <p className="block text-sm font-medium text-slate-300 mb-2">Image Preview</p>
                 <img src={imageUrl} alt="Component Preview" className="rounded-lg w-full h-auto max-h-32 object-contain bg-slate-700 p-2"/>
@@ -286,8 +302,8 @@ const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onAddCom
             )}
 
             <div className="flex justify-end gap-4 pt-4">
-              <button type="button" onClick={onClose} className="py-2 px-4 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition duration-300">Cancel</button>
-              <button type="submit" className="py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-600/30 transition duration-300">Add Component</button>
+              <button type="button" onClick={onClose} className="py-2 px-4 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition">Cancel</button>
+              <button type="submit" className="py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-600/30 transition">Add Component</button>
             </div>
           </form>
         </div>

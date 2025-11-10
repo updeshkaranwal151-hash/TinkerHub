@@ -75,3 +75,9 @@ export interface Project {
   youtubeUrl?: string;
   attachments: Attachment[];
 }
+
+export interface AISuggestions {
+  name: string;
+  description: string;
+  category: Category;
+}
