@@ -80,12 +80,17 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
               const aiResponse: Message = { sender: 'ai', text: "I couldn't find any recognizable components in the image. Please try again with a clearer picture." };
               setMessages(prev => [...prev, aiResponse]);
           } else {
-              const summary = analysis.map(item => `- ${item.quantity} x ${item.name}`).join('\n');
+              const analysisWithImage = analysis.map(item => ({
+                ...item,
+                imageUrl: initialImageURL,
+              }));
+              
+              const summary = analysisWithImage.map(item => `- ${item.quantity} x ${item.name}`).join('\n');
               const aiResponseText = `I've analyzed the image and found the following:\n${summary}\n\nYou can edit the details below and add them to your inventory.`;
               
-              const aiResponse: Message = { sender: 'ai', text: aiResponseText, analysisResult: analysis };
+              const aiResponse: Message = { sender: 'ai', text: aiResponseText, analysisResult: analysisWithImage };
               setMessages(prev => [...prev, aiResponse]);
-              setEditableAnalysis(analysis);
+              setEditableAnalysis(analysisWithImage);
           }
         } catch (error: any) {
           const errorMessage: Message = { sender: 'ai', text: `Sorry, I couldn't analyze the image: ${error.message}` };
@@ -204,7 +209,7 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
           totalQuantity: Number(item.quantity) || 1,
           issuedTo: [],
           isAvailable: true,
-          imageUrl: '',
+          imageUrl: item.imageUrl || 'https://placehold.co/400x300/1e293b/94a3b8/png?text=No+Image',
           links: [],
           lowStockThreshold: undefined,
       }));
