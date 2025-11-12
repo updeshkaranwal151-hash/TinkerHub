@@ -107,9 +107,9 @@ export const EmptyStateIcon = () => (
     </svg>
 );
 
-export const ProjectIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-5L9 4H4zm2 2h4l2 2h4v8H6V6z" clipRule="evenodd" />
+export const ProjectIcon = ({ className = "h-10 w-10" }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path d="M2.5 4A1.5 1.5 0 014 2.5h3.693a1.5 1.5 0 011.23.63l.933 1.242a.5.5 0 00.41.228H16a1.5 1.5 0 011.5 1.5v10A1.5 1.5 0 0116 17.5H4A1.5 1.5 0 012.5 16V4z" />
     </svg>
 );
 
@@ -292,5 +292,23 @@ export const CloudIcon = ({ className = "h-12 w-12 text-indigo-400" }: { classNa
 export const MoreIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
         <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+    </svg>
+);
+
+export const CheckboxIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+export const CheckboxCheckedIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+    </svg>
+);
+
+export const GripVerticalIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path d="M5 4a1 1 0 112 0 1 1 0 01-2 0zM5 10a1 1 0 112 0 1 1 0 01-2 0zM5 16a1 1 0 112 0 1 1 0 01-2 0zM11 4a1 1 0 112 0 1 1 0 01-2 0zM11 10a1 1 0 112 0 1 1 0 01-2 0zM11 16a1 1 0 112 0 1 1 0 01-2 0z" />
     </svg>
 );

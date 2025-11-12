@@ -39,6 +39,11 @@
       .card-enter-animation {
         animation: slide-up-fade-in 0.5s ease-out forwards;
       }
+      
+      .widget-enter-animation {
+         animation: slide-up-fade-in 0.4s ease-out forwards;
+      }
+
 
       /* Splash Screen Animations */
       @keyframes move-top-left {
@@ -88,6 +93,30 @@
       .animate-slow-rotate {
         animation: slow-rotate 8s linear infinite;
       }
+      
+      /* Scrollbar styles for Project Hub */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #475569; /* slate-600 */
+        border-radius: 4px;
+        border: 2px solid transparent;
+        background-clip: content-box;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: #64748b; /* slate-500 */
+      }
+      body.light-mode .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1; /* slate-300 */
+      }
+      body.light-mode .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: #94a3b8; /* slate-400 */
+      }
+
 
       /* Light Mode overrides */
       body.light-mode {
@@ -236,6 +265,34 @@
         background-color: #e2e8f0 !important;
         color: #475569 !important;
       }
+      
+      /* Project Hub */
+       body.light-mode .project-hub-sidebar {
+        background-color: #f8fafc !important;
+        border-color: #e2e8f0 !important;
+       }
+       body.light-mode .project-hub-sidebar .bg-slate-800 {
+         background-color: #f1f5f9 !important;
+       }
+       body.light-mode .project-hub-sidebar button:hover {
+         background-color: #f1f5f9 !important;
+       }
+       body.light-mode .project-hub-sidebar button[aria-selected="true"] {
+         background-color: #eef2ff !important;
+         border-color: #6366f1 !important;
+       }
+       body.light-mode .project-dashboard .bg-slate-800\/50 {
+         background-color: #ffffff !important;
+         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+       }
+       body.light-mode .task-item {
+         background-color: #f1f5f9 !important;
+         border-color: #e2e8f0 !important;
+       }
+       body.light-mode .task-item:has(input:checked) {
+         background-color: #f0fdf4 !important;
+       }
+
 
       /* Toggle Switch */
       body.light-mode .block.bg-slate-600 {

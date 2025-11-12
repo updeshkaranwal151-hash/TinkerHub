@@ -61,7 +61,12 @@ export async function onRequestPost(context) {
         }
         
         const validCategories = Object.values(Category).join(', ');
-        const identificationPrompt = `Identify this electronic component from the image. Provide its common name, a brief technical description, and classify it into one of the following exact categories: [${validCategories}]. If you are unsure, set the name to 'Unknown Component' and describe what you see.`;
+        const identificationPrompt = `Analyze the provided image of an electronic component. Based on its physical characteristics (markings, pins, shape, etc.), provide the following information in the specified JSON format:
+1.  **name**: The most common and specific name for the component (e.g., "Arduino Uno R3", "HC-SR04 Ultrasonic Sensor").
+2.  **description**: A concise, one-sentence technical description of its primary function.
+3.  **category**: Classify it into ONE of the following exact categories: [${validCategories}].
+
+If you cannot confidently identify the component, set the name to "Unknown Component" and use the description to detail what you see in the image.`;
 
         const responseSchema = {
             type: Type.OBJECT,
@@ -74,7 +79,7 @@ export async function onRequestPost(context) {
         };
         
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-pro',
             contents: {
                 parts: [
                     { text: identificationPrompt },

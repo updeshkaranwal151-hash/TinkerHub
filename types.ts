@@ -61,6 +61,19 @@ export interface Attachment {
   dataUrl: string; // base64
 }
 
+export enum ProjectStatus {
+    IN_PROGRESS = 'In Progress',
+    COMPLETED = 'Completed',
+    ON_HOLD = 'On Hold',
+}
+
+export interface ProjectTask {
+    id: string;
+    text: string;
+    isCompleted: boolean;
+}
+
+
 export interface Project {
   id: string;
   name: string;
@@ -74,6 +87,9 @@ export interface Project {
   projectLogoUrl?: string;
   youtubeUrl?: string;
   attachments: Attachment[];
+  status: ProjectStatus;
+  tasks: ProjectTask[];
+  notes?: string;
 }
 
 export interface AISuggestions {

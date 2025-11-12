@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Project, RequiredComponent, Component, Attachment } from '../types.ts';
+import { Project, RequiredComponent, Component, Attachment, ProjectStatus } from '../types.ts';
 import { SearchIcon, PlusIcon, TrashIcon, UploadIcon, FileIcon } from './Icons.tsx';
 
 interface ProjectModalProps {
@@ -24,6 +24,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ onClose, onSave, existingPr
   const [description, setDescription] = useState('');
   const [features, setFeatures] = useState('');
   const [projectDate, setProjectDate] = useState(new Date().toISOString().split('T')[0]);
+  const [status, setStatus] = useState<ProjectStatus>(ProjectStatus.IN_PROGRESS);
   
   const [teamMembers, setTeamMembers] = useState<string[]>([]);
   const [currentMember, setCurrentMember] = useState('');
@@ -44,6 +45,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ onClose, onSave, existingPr
       setDescription(existingProject.description || '');
       setFeatures(existingProject.features || '');
       setProjectDate(existingProject.projectDate ? new Date(existingProject.projectDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+      setStatus(existingProject.status || ProjectStatus.IN_PROGRESS);
       setTeamMembers(existingProject.teamMembers || []);
       setProjectLogoUrl(existingProject.projectLogoUrl);
       setLogoPreview(existingProject.projectLogoUrl || null);
@@ -72,6 +74,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ onClose, onSave, existingPr
       description,
       features,
       projectDate,
+      status,
       requiredComponents,
       projectLogoUrl,
       youtubeUrl,
@@ -158,7 +161,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ onClose, onSave, existingPr
       <div className="bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-lg shadow-xl p-6 md:p-8 w-full max-w-2xl relative max-h-[90vh] flex flex-col">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
         <h2 className="text-2xl font-bold mb-4 text-white flex-shrink-0">{existingProject ? 'Edit Project' : 'Create New Project'}</h2>
-        <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 -mr-4 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 -mr-4 space-y-4 custom-scrollbar">
           
           <Section title="1. Basic Information">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -171,9 +174,17 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ onClose, onSave, existingPr
                 <input type="text" id="teamName" value={teamName} onChange={e => setTeamName(e.target.value)} required className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500"/>
               </div>
             </div>
-            <div>
-              <label htmlFor="projectDate" className="block text-sm font-medium text-slate-300">Project Date</label>
-              <input type="date" id="projectDate" value={projectDate} onChange={e => setProjectDate(e.target.value)} required className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500"/>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="projectDate" className="block text-sm font-medium text-slate-300">Project Date</label>
+                  <input type="date" id="projectDate" value={projectDate} onChange={e => setProjectDate(e.target.value)} required className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500"/>
+                </div>
+                <div>
+                  <label htmlFor="projectStatus" className="block text-sm font-medium text-slate-300">Project Status</label>
+                   <select id="projectStatus" value={status} onChange={e => setStatus(e.target.value as ProjectStatus)} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500">
+                      {Object.values(ProjectStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                   </select>
+                </div>
             </div>
              <div>
               <label htmlFor="projectLogo" className="block text-sm font-medium text-slate-300">Project Logo</label>
@@ -228,7 +239,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({ onClose, onSave, existingPr
                 <input type="text" placeholder="Search components..." value={componentSearch} onChange={e => setComponentSearch(e.target.value)} className="w-full bg-slate-900/80 border-slate-600 rounded-md py-2 px-4 pl-10 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"/>
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
             </div>
-            <div className="bg-slate-900/50 border border-slate-600 rounded-lg max-h-48 overflow-y-auto p-3 space-y-2">
+            <div className="bg-slate-900/50 border border-slate-600 rounded-lg max-h-48 overflow-y-auto p-3 space-y-2 custom-scrollbar">
               {filteredComponents.length > 0 ? filteredComponents.map(component => (
                 <label key={component.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-slate-700/50 transition-colors cursor-pointer">
                   <input type="checkbox" checked={selectedComponents.has(component.id)} onChange={() => handleComponentToggle(component.id)} className="h-5 w-5 rounded bg-slate-600 border-slate-500 text-indigo-500 focus:ring-indigo-600"/>
