@@ -1,8 +1,9 @@
 
 
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Logo } from './Logo.tsx';
-import { DatabaseIcon, CloudIcon, AIAssistantIcon, ProjectIcon, ImportIcon, MoonIcon, UserCircleIcon } from './Icons.tsx';
+import { DatabaseIcon, CloudIcon, AIAssistantIcon, ProjectIcon, ImportIcon, MoonIcon, UserCircleIcon, StarIcon } from './Icons.tsx';
 
 
 interface LandingPageProps {
@@ -59,7 +60,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
     }, []);
 
     const teamMembers = [
-        { name: 'Apoorv Karanwal', role: 'from Knowledge warriors' },
+        { name: 'Apoorv Karanwal', role: 'Team Leader (Knowledge Warriors)', isLeader: true },
         { name: 'Yogesh Singh', role: 'from Knowledge warriors' },
         { name: 'Divyanshu Singh', role: 'from Knowledge warriors' },
     ];
@@ -201,8 +202,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             {teamMembers.map((member, index) => (
                                 <div key={member.name} ref={el => { sectionsRef.current[12+index] = el; }} className="fade-in-section bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 text-center transition-all duration-300 hover:border-sky-400/50 hover:-translate-y-2 hover:shadow-2xl hover:shadow-sky-500/10" style={{ transitionDelay: `${index * 100}ms` }}>
-                                    <UserCircleIcon className="h-28 w-28 text-slate-700 mx-auto" />
-                                    <h3 className="text-2xl font-bold text-white mt-4">{member.name}</h3>
+                                    {member.isLeader ? (
+                                        <div className="flex flex-col items-center mb-4">
+                                            <StarIcon className="h-10 w-10 text-amber-400 mb-2 animate-slow-rotate" />
+                                            <UserCircleIcon className="h-28 w-28 text-slate-700" />
+                                        </div>
+                                    ) : (
+                                        <UserCircleIcon className="h-28 w-28 text-slate-700 mx-auto mb-4" />
+                                    )}
+                                    <h3 className={`font-bold mt-4 ${member.isLeader ? 'text-3xl text-amber-400' : 'text-2xl text-white'}`}>
+                                        {member.name}
+                                    </h3>
                                     <p className="text-slate-400 mt-1">{member.role}</p>
                                 </div>
                             ))}

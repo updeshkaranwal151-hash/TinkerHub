@@ -61,10 +61,21 @@ export async function onRequestPost(context) {
         }
         
         const validCategories = Object.values(Category).join(', ');
-        const identificationPrompt = `Analyze the provided image of an electronic component. Based on its physical characteristics (markings, pins, shape, etc.), provide the following information in the specified JSON format:
-1.  **name**: The most common and specific name for the component (e.g., "Arduino Uno R3", "HC-SR04 Ultrasonic Sensor").
-2.  **description**: A concise, one-sentence technical description of its primary function.
-3.  **category**: Classify it into ONE of the following exact categories: [${validCategories}].
+        const identificationPrompt = `You are an expert in identifying electronic components for a school's tinkering lab. Analyze the provided image. Your task is to identify the main component and provide its details in the specified JSON format.
+
+**Instructions:**
+1.  **Focus on the primary component.** If multiple items are visible, identify the most prominent one.
+2.  **Be specific.** For example, "Arduino Uno R3" is better than "Microcontroller board".
+3.  **Handle common, simple components correctly.** For example:
+    *   Wires with pin connectors at the ends are "Jumper Wires".
+    *   A white or transparent plastic board with a grid of holes is a "Breadboard".
+    *   Small, two-legged colored components are likely "LEDs" or "Resistors".
+4.  **Provide the output strictly in the following JSON format.**
+
+**JSON Output Structure:**
+1.  **name**: The most common and specific name for the component (e.g., "Arduino Uno R3", "HC-SR04 Ultrasonic Sensor", "Jumper Wires").
+2.  **description**: A concise, one-sentence technical description of its primary function. For simple components, describe their use (e.g., "Used to connect components on a breadboard without soldering.").
+3.  **category**: Classify it into ONE of the following exact categories: [${validCategories}]. "Jumper Wires" and "Breadboard" belong to the "General Component" category.
 
 If you cannot confidently identify the component, set the name to "Unknown Component" and use the description to detail what you see in the image.`;
 

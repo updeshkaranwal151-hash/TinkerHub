@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Component, IssueRecord, Category, Project, MaintenanceRecord, AISuggestions } from './types.ts';
 import Header from './components/Header.tsx';
@@ -81,6 +82,16 @@ const App: React.FC = () => {
     return localStorage.getItem('theme') === 'light';
   });
 
+  // Effect to set initial passwords if they don't exist
+  useEffect(() => {
+    if (!localStorageService.getAdminPassword()) {
+      localStorageService.setAdminPassword('adminpass'); // Default admin password
+    }
+    if (!localStorageService.getUserPassword()) {
+      localStorageService.setUserPassword('userpass'); // Default user password
+    }
+  }, []);
+
   useEffect(() => {
     localStorageService.trackVisit();
   }, []);
@@ -100,22 +111,26 @@ const App: React.FC = () => {
   }, [isLightMode]);
 
   useEffect(() => {
-    if (isAuthenticated && !isAdmin) {
+    if (isAuthenticated) {
         setIsLoading(true);
         try {
             const componentData = localStorageService.getComponents();
             setComponents(componentData);
             const projectData = localStorageService.getProjects();
             setProjects(projectData);
+            setImageLibrary(getMergedImageLibrary()); // Ensure image library is up-to-date
         } catch (err) {
             console.error("Error fetching data from local storage:", err);
         } finally {
             setTimeout(() => setIsLoading(false), 300);
         }
-    } else if (isAdmin) {
-        setIsLoading(false);
+    } else {
+        // Clear data if not authenticated
+        setComponents([]);
+        setProjects([]);
+        setImageLibrary(getMergedImageLibrary()); // Reset to default + custom only
     }
-  }, [isAuthenticated, isAdmin]);
+  }, [isAuthenticated]); // Only re-run when authentication status changes
 
   const handleOpenScanner = () => {
       setIsScannerModalOpen(true);
@@ -351,11 +366,30 @@ const App: React.FC = () => {
     />;
   }
 
+  // Admin Panel is rendered if isAdmin is true
   if (isAdmin) {
-    return <AdminPanel 
-        onExit={() => setIsAdmin(false)} 
-        onLibraryUpdate={() => setImageLibrary(getMergedImageLibrary())}
-    />
+    return (
+      <AdminPanel 
+          onExit={() => setIsAdmin(false)} 
+          onLibraryUpdate={() => setImageLibrary(getMergedImageLibrary())}
+          components={components}
+          setComponents={setComponents}
+          projects={projects}
+          setProjects={setProjects}
+          imageLibrary={imageLibrary}
+          isLightMode={isLightMode}
+          onToggleLightMode={() => setIsLightMode(prev => !prev)}
+          // Pass component specific handlers
+          onOpenEditModal={handleOpenEditModal}
+          onOpenMaintenanceModal={handleOpenMaintenanceModal}
+          onToggleMaintenance={handleToggleMaintenance}
+          onDeleteComponent={handleDeleteComponent}
+          onOpenEditProjectModal={handleOpenEditProjectModal}
+          onDeleteProject={handleDeleteProject}
+          onUpdateProject={handleUpdateProject}
+          onOpenProjectModal={() => { setProjectToEdit(null); setIsProjectModalOpen(true); }}
+      />
+    );
   }
 
   return (

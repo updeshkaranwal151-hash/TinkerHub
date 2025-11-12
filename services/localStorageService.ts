@@ -1,3 +1,4 @@
+
 import { Component, IssueRecord, Category, Project, RequiredComponent, MaintenanceRecord, Attachment, ProjectStatus } from '../types.ts';
 import { ImageData } from '../components/imageLibrary.ts';
 
@@ -7,6 +8,9 @@ const PROJECTS_STORAGE_KEY = 'atl-inventory-projects';
 const IMAGE_LIBRARY_KEY = 'atl-inventory-custom-images';
 const ANALYTICS_KEY = 'atl-inventory-analytics';
 const VISITOR_ID_KEY = 'atl-inventory-visitor-id';
+const ADMIN_PASSWORD_KEY = 'atl-admin-password';
+const USER_PASSWORD_KEY = 'atl-user-password';
+
 
 // --- Analytics Types ---
 interface AnalyticsData {
@@ -315,4 +319,62 @@ export const trackSuccessfulLogin = (): void => {
   const analytics = getAnalyticsData();
   analytics.successfulLogins += 1;
   saveAnalyticsData(analytics);
+};
+
+// --- Password Management Functions ---
+export const getAdminPassword = (): string | null => {
+  return localStorage.getItem(ADMIN_PASSWORD_KEY);
+};
+
+export const setAdminPassword = (password: string): void => {
+  localStorage.setItem(ADMIN_PASSWORD_KEY, password);
+};
+
+export const getUserPassword = (): string | null => {
+  return localStorage.getItem(USER_PASSWORD_KEY);
+};
+
+export const setUserPassword = (password: string): void => {
+  localStorage.setItem(USER_PASSWORD_KEY, password);
+};
+
+// --- Global Data Management ---
+interface AllAppData {
+  components: Component[];
+  projects: Project[];
+  imageLibrary: Record<string, ImageData[]>;
+  analytics: AnalyticsData;
+  adminPassword: string | null;
+  userPassword: string | null;
+}
+
+export const exportAllAppData = (): AllAppData => {
+  return {
+    components: getComponentsFromStorage(),
+    projects: getProjectsFromStorage(),
+    imageLibrary: getCustomImageLibrary(),
+    analytics: getAnalyticsData(),
+    adminPassword: getAdminPassword(),
+    userPassword: getUserPassword(),
+  };
+};
+
+export const importAllAppData = (data: AllAppData): void => {
+  localStorage.setItem(COMPONENTS_STORAGE_KEY, JSON.stringify(data.components));
+  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(data.projects));
+  localStorage.setItem(IMAGE_LIBRARY_KEY, JSON.stringify(data.imageLibrary));
+  localStorage.setItem(ANALYTICS_KEY, JSON.stringify(data.analytics));
+  if (data.adminPassword) localStorage.setItem(ADMIN_PASSWORD_KEY, data.adminPassword);
+  if (data.userPassword) localStorage.setItem(USER_PASSWORD_KEY, data.userPassword);
+};
+
+
+export const clearAllAppData = (): void => {
+  localStorage.removeItem(COMPONENTS_STORAGE_KEY);
+  localStorage.removeItem(PROJECTS_STORAGE_KEY);
+  localStorage.removeItem(IMAGE_LIBRARY_KEY);
+  localStorage.removeItem(ANALYTICS_KEY);
+  localStorage.removeItem(VISITOR_ID_KEY); // Also clear visitor ID
+  localStorage.removeItem(ADMIN_PASSWORD_KEY);
+  localStorage.removeItem(USER_PASSWORD_KEY);
 };

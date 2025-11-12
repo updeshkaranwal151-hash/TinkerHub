@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as localStorageService from '../services/localStorageService.ts';
 import { Logo } from './Logo.tsx';
 
@@ -48,7 +48,9 @@ const AnimatedBackground: React.FC = () => {
 
 
 const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onSuccess, onAdminSuccess }) => {
-  
+  // Since App.tsx ensures default passwords are set, we can directly present the choice.
+  // The original password input and validation are no longer needed here for login.
+
   const handleUserLogin = () => {
     localStorageService.trackSuccessfulLogin();
     onSuccess();
@@ -72,7 +74,10 @@ const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onSuccess, onAd
                 <p className="text-lg text-slate-400 mt-2">The ATL Lab Inventory Manager</p>
             </div>
             <div className="password-protection-card bg-slate-800/80 backdrop-blur-sm rounded-lg shadow-xl p-6 md:p-8 w-full max-w-sm z-10 border border-slate-700">
-                <h2 className="text-xl font-bold mb-6 text-center text-slate-200">Select Your Access Level</h2>
+                <h2 className="text-xl font-bold mb-6 text-center text-slate-200">
+                    Select Panel
+                </h2>
+                
                 <div className="space-y-4">
                    <button
                         onClick={handleUserLogin}
