@@ -6,7 +6,6 @@ import { AIAssistantIcon, SendIcon, PlusIcon, TrashIcon } from './Icons.tsx'; //
 interface AILabAssistantModalProps {
   onClose: () => void;
   components: Component[];
-  initialImageURL?: string | null;
 }
 
 interface Message {
@@ -39,7 +38,7 @@ const dataURLtoFile = (dataurl: string, filename: string): File => {
 }
 
 
-const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, components, initialImageURL }) => {
+const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, components }) => {
   const [messages, setMessages] = useState<Message[]>([
     { sender: 'ai', text: "Hello! I'm your TinkerHub AI Assistant. I can help you with inventory reports, project ideas, and even process images! What can I help you with today?" }
   ]);
@@ -70,16 +69,6 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
 
   useEffect(scrollToBottom, [messages]);
   
-  useEffect(() => {
-    if (initialImageURL) {
-        const imageFile = dataURLtoFile(initialImageURL, 'scanned-component.jpg');
-        const defaultPrompt = 'Identify this component from the attached image. Please tell me its name, a detailed technical description, and suggest a suitable category for it so I can add it to my TinkerHub inventory.';
-        
-        // Directly call sendMessage with the image and default prompt
-        sendMessage(defaultPrompt, imageFile);
-    }
-}, [initialImageURL]);
-
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type.startsWith('image/')) {

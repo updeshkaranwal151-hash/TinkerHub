@@ -20,6 +20,7 @@ import ProjectDetailView from './components/ProjectDetailView.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import SplashScreen from './components/SplashScreen.tsx';
 import SmartScannerModal from './components/SmartScannerModal.tsx';
+import AIComponentScanResultModal from './components/AIComponentScanResultModal.tsx';
 
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
@@ -66,6 +67,7 @@ const App: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+  const [isScanResultModalOpen, setIsScanResultModalOpen] = useState(false);
   const [componentToEdit, setComponentToEdit] = useState<Component | null>(null);
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [componentToIssue, setComponentToIssue] = useState<Component | null>(null);
@@ -75,8 +77,7 @@ const App: React.FC = () => {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'default', direction: 'ascending' });
   const [viewMode, setViewMode] = useState<ViewMode>('inventory');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-
-  const [imageForAssistant, setImageForAssistant] = useState<string | null>(null);
+  const [scannedImageData, setScannedImageData] = useState<string | null>(null);
 
   const [isLightMode, setIsLightMode] = useState<boolean>(() => {
     return localStorage.getItem('theme') === 'light';
@@ -124,8 +125,8 @@ const App: React.FC = () => {
 
   const handleImageScanned = (imageDataUrl: string) => {
       setIsScannerModalOpen(false);
-      setImageForAssistant(imageDataUrl);
-      setIsAssistantModalOpen(true);
+      setScannedImageData(imageDataUrl);
+      setIsScanResultModalOpen(true);
   };
 
 
@@ -134,6 +135,8 @@ const App: React.FC = () => {
         const addedComponent = localStorageService.addComponent(newComponent);
         setComponents(prev => [addedComponent, ...prev]);
         setIsAddModalOpen(false);
+        setIsScanResultModalOpen(false);
+        setScannedImageData(null);
     } catch (err) {
         alert("Error adding component. Please try again.");
     }
@@ -610,12 +613,8 @@ const App: React.FC = () => {
       
       {isAssistantModalOpen && (
         <AILabAssistantModal 
-          onClose={() => {
-              setIsAssistantModalOpen(false);
-              setImageForAssistant(null);
-          }}
+          onClose={() => setIsAssistantModalOpen(false)}
           components={components}
-          initialImageURL={imageForAssistant}
         />
       )}
 
@@ -645,6 +644,18 @@ const App: React.FC = () => {
             onImageScanned={handleImageScanned}
         />
       )}
+
+      {isScanResultModalOpen && scannedImageData && (
+        <AIComponentScanResultModal
+          imageDataUrl={scannedImageData}
+          onClose={() => {
+            setIsScanResultModalOpen(false);
+            setScannedImageData(null);
+          }}
+          onAddComponent={handleAddComponent}
+        />
+      )}
+
 
       <button
         onClick={() => setIsAssistantModalOpen(true)}
