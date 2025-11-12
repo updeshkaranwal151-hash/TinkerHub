@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Category } from '../types.ts';
 import type { ImageData, BackupData, AnalyticsData, Component, Project } from '../types.ts';
 import * as localStorageService from '../services/localStorageService.ts'; // Changed from apiService
-import * as customImageService from '../services/customImageService';
-import { UploadIcon, TrashIcon, EditIcon, EyeIcon, UsersIcon, CheckCircleIcon, DashboardIcon, ImageIcon, HardDriveIcon, ExportIcon, ImportIcon, ChartBarIcon, WarningIcon, ProjectIcon as ProjectIconSvg, DatabaseIcon } from './Icons.tsx';
+import * as customImageService from './customImageService';
+import { UploadIcon, TrashIcon, EditIcon, EyeIcon, UserIcon, CheckCircleIcon, DashboardIcon, ImageIcon, HardDriveIcon, ExportIcon, ImportIcon, ChartBarIcon, WarningIcon, ProjectIcon as ProjectIconSvg, DatabaseIcon } from './Icons.tsx';
 import EditImageModal from './EditImageModal.tsx';
 
 interface AdminPanelProps {
@@ -108,7 +108,7 @@ const DashboardView: React.FC = () => {
             <h2 className="text-2xl font-bold text-white">At a Glance</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <MetricCard icon={<EyeIcon />} title="Total Visits" value={stats.analytics.totalVisits} />
-                <MetricCard icon={<UsersIcon />} title="Unique Visitors" value={stats.analytics.uniqueVisitors} />
+                <MetricCard icon={<UserIcon />} title="Unique Visitors" value={stats.analytics.uniqueVisitors} />
                 <MetricCard icon={<CheckCircleIcon />} title="Successful Logins" value={stats.analytics.successfulLogins} />
             </div>
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
