@@ -2,9 +2,9 @@ import { AISuggestions } from '../types.ts';
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 
 const getGeminiClient = () => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.API_KEY || process.env.GEMINI_API;
   if (!apiKey) {
-    throw new Error('API_KEY environment variable is not configured.');
+    throw new Error('API_KEY or GEMINI_API environment variable is not configured.');
   }
   return new GoogleGenAI({ apiKey });
 };
