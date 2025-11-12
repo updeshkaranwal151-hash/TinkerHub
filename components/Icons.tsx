@@ -107,8 +107,9 @@ export const EmptyStateIcon = () => (
     </svg>
 );
 
-export const ProjectIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
+// FIX: Added className prop to allow for flexible styling.
+export const ProjectIcon = ({ className = "h-10 w-10" }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-5L9 4H4zm2 2h4l2 2h4v8H6V6z" clipRule="evenodd" />
     </svg>
 );

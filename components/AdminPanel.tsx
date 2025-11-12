@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Category } from '../types.ts';
 import type { ImageData, BackupData, AnalyticsData, Component, Project } from '../types.ts';
 import * as localStorageService from '../services/localStorageService.ts'; // Changed from apiService
-import * as customImageService from './customImageService';
+import * as customImageService from '../services/customImageService.ts';
 import { UploadIcon, TrashIcon, EditIcon, EyeIcon, UserIcon, CheckCircleIcon, DashboardIcon, ImageIcon, HardDriveIcon, ExportIcon, ImportIcon, ChartBarIcon, WarningIcon, ProjectIcon as ProjectIconSvg, DatabaseIcon } from './Icons.tsx';
 import EditImageModal from './EditImageModal.tsx';
 
