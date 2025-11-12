@@ -1,6 +1,7 @@
 import React from 'react';
 import { Project } from '../types.ts';
 import { EditIcon, TrashIcon, ProjectIcon, TeamIcon, FileIcon } from './Icons.tsx';
+import { FaCube } from 'react-icons/fa'; // Placeholder, assuming react-icons can be used or an equivalent SVG is created.
 
 const ComponentIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">

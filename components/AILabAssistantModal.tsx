@@ -1,20 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Component, AISuggestions, Category } from '../types.ts';
-import { askAILabAssistant, analyzeAndCountComponents } from '../services/geminiService.ts';
-import { AIAssistantIcon, SendIcon, PlusIcon, TrashIcon } from './Icons.tsx';
+import { Component } from '../types.ts';
+import { askAILabAssistant } from '../services/geminiService.ts';
+import { AIAssistantIcon, SendIcon, PlusIcon, TrashIcon } from './Icons.tsx'; // Import TrashIcon for clearing image
 
 interface AILabAssistantModalProps {
   onClose: () => void;
   components: Component[];
   initialImageURL?: string | null;
-  onAddMultipleComponents: (components: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>[]) => void;
 }
 
 interface Message {
   sender: 'user' | 'ai';
   text: string;
-  imageUrl?: string;
-  analysisResult?: AISuggestions[];
+  imageUrl?: string; // Optional: to display user's image in chat
 }
 
 // Helper to convert File to Base64
@@ -27,7 +25,21 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, components, initialImageURL, onAddMultipleComponents }) => {
+const dataURLtoFile = (dataurl: string, filename: string): File => {
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+}
+
+
+const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, components, initialImageURL }) => {
   const [messages, setMessages] = useState<Message[]>([
     { sender: 'ai', text: "Hello! I'm your TinkerHub AI Assistant. I can help you with inventory reports, project ideas, and even process images! What can I help you with today?" }
   ]);
@@ -37,7 +49,6 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
   const [showSuggestionPrompts, setShowSuggestionPrompts] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
-  const [editableAnalysis, setEditableAnalysis] = useState<AISuggestions[] | null>(null);
 
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
@@ -61,48 +72,13 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
   
   useEffect(() => {
     if (initialImageURL) {
-      const analyzeScannedImage = async () => {
-        setIsLoading(true);
-        setMessages(prev => [...prev, {
-          sender: 'user',
-          text: 'Please analyze and count the components in this image.',
-          imageUrl: initialImageURL,
-        }]);
-        setEditableAnalysis(null);
-
-        try {
-          const base64 = initialImageURL.split(',')[1];
-          const mimeType = initialImageURL.match(/:(.*?);/)?.[1] || 'image/jpeg';
-          
-          const analysis = await analyzeAndCountComponents(base64, mimeType);
-
-          if (analysis.length === 0) {
-              const aiResponse: Message = { sender: 'ai', text: "I couldn't find any recognizable components in the image. Please try again with a clearer picture." };
-              setMessages(prev => [...prev, aiResponse]);
-          } else {
-              const analysisWithImage = analysis.map(item => ({
-                ...item,
-                imageUrl: initialImageURL,
-              }));
-              
-              const summary = analysisWithImage.map(item => `- ${item.quantity} x ${item.name}`).join('\n');
-              const aiResponseText = `I've analyzed the image and found the following:\n${summary}\n\nYou can edit the details below and add them to your inventory.`;
-              
-              const aiResponse: Message = { sender: 'ai', text: aiResponseText, analysisResult: analysisWithImage };
-              setMessages(prev => [...prev, aiResponse]);
-              setEditableAnalysis(analysisWithImage);
-          }
-        } catch (error: any) {
-          const errorMessage: Message = { sender: 'ai', text: `Sorry, I couldn't analyze the image: ${error.message}` };
-          setMessages(prev => [...prev, errorMessage]);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      analyzeScannedImage();
+        const imageFile = dataURLtoFile(initialImageURL, 'scanned-component.jpg');
+        const defaultPrompt = 'Identify this component from the attached image. Please tell me its name, a detailed technical description, and suggest a suitable category for it so I can add it to my TinkerHub inventory.';
+        
+        // Directly call sendMessage with the image and default prompt
+        sendMessage(defaultPrompt, imageFile);
     }
-  }, [initialImageURL]);
+}, [initialImageURL]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -119,13 +95,14 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
   const clearSelectedImage = () => {
     setSelectedImageFile(null);
     setSelectedImagePreview(null);
+    // Clear the file input value as well, if it exists
     const fileInput = document.getElementById('image-upload-input') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
 
 
   const sendMessage = async (prompt: string, imageFile: File | null = null) => {
-    if ((!prompt && !imageFile) || isLoading) return;
+    if ((!prompt && !imageFile) || isLoading) return; // Must have either text or image
 
     let userMessage: Message;
     let imageBase64: string | undefined;
@@ -141,8 +118,7 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
     
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
-    setEditableAnalysis(null);
-    clearSelectedImage();
+    clearSelectedImage(); // Clear image input after sending
 
     try {
       const inventoryContext = JSON.stringify(components.map(({ name, category, totalQuantity, issuedTo, lowStockThreshold }) => ({
@@ -175,7 +151,7 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
 
   const handleSendFromInput = () => {
     const trimmedInput = input.trim();
-    if (trimmedInput || selectedImageFile) {
+    if (trimmedInput || selectedImageFile) { // Allow sending with only an image
       sendMessage(trimmedInput, selectedImageFile);
       setInput('');
     }
@@ -185,41 +161,6 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
     if (e.key === 'Enter') {
       handleSendFromInput();
     }
-  };
-  
-  const handleAnalysisChange = (index: number, field: keyof AISuggestions, value: string | number) => {
-      if (!editableAnalysis) return;
-      const updatedAnalysis = [...editableAnalysis];
-      (updatedAnalysis[index] as any)[field] = value;
-      setEditableAnalysis(updatedAnalysis);
-  };
-
-  const handleRemoveAnalysisItem = (index: number) => {
-      if (!editableAnalysis) return;
-      setEditableAnalysis(editableAnalysis.filter((_, i) => i !== index));
-  };
-
-  const handleConfirmAndAdd = () => {
-      if (!editableAnalysis || editableAnalysis.length === 0) return;
-
-      const componentsToAdd = editableAnalysis.map(item => ({
-          name: item.name,
-          description: item.description,
-          category: item.category,
-          totalQuantity: Number(item.quantity) || 1,
-          issuedTo: [],
-          isAvailable: true,
-          imageUrl: item.imageUrl || 'https://placehold.co/400x300/1e293b/94a3b8/png?text=No+Image',
-          links: [],
-          lowStockThreshold: undefined,
-      }));
-      
-      onAddMultipleComponents(componentsToAdd);
-      setEditableAnalysis(null);
-      setMessages(prev => [...prev, {
-          sender: 'ai',
-          text: `Great! I've added ${componentsToAdd.length} component type(s) to your inventory.`,
-      }]);
   };
 
   return (
@@ -243,37 +184,11 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
           {messages.map((msg, index) => (
             <div key={index} className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.sender === 'ai' && <div className="w-8 h-8 bg-slate-700 rounded-full flex-shrink-0"></div>}
-              <div className={`max-w-md p-3 rounded-lg ${msg.sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-200'} flex flex-col`}>
+              <div className={`max-w-md p-3 rounded-lg ${msg.sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-200'}`}>
                 {msg.imageUrl && (
                     <img src={msg.imageUrl} alt="User provided" className="max-w-full h-auto rounded-md mb-2 object-cover max-h-48" />
                 )}
                 <p className="text-sm" style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</p>
-                {msg.analysisResult && editableAnalysis && index === messages.length -1 && (
-                    <div className="mt-4 p-3 bg-slate-800/50 rounded-lg border border-slate-600 space-y-3">
-                        <div className="grid grid-cols-12 gap-2 text-xs font-bold text-slate-400 px-1">
-                            <div className="col-span-2 text-center">Qty</div>
-                            <div className="col-span-5">Name</div>
-                            <div className="col-span-4">Category</div>
-                        </div>
-                        {editableAnalysis.map((item, itemIndex) => (
-                            <div key={itemIndex} className="grid grid-cols-12 gap-2 items-center">
-                                <input type="number" value={item.quantity} onChange={(e) => handleAnalysisChange(itemIndex, 'quantity', parseInt(e.target.value, 10) || 0)} className="col-span-2 bg-slate-700 border-slate-600 rounded p-1 text-sm text-center" />
-                                <input type="text" value={item.name} onChange={(e) => handleAnalysisChange(itemIndex, 'name', e.target.value)} className="col-span-5 bg-slate-700 border-slate-600 rounded p-1 text-sm" />
-                                <select value={item.category} onChange={(e) => handleAnalysisChange(itemIndex, 'category', e.target.value as Category)} className="col-span-4 bg-slate-700 border-slate-600 rounded p-1 text-sm">
-                                    {Object.values(Category).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                </select>
-                                <button onClick={() => handleRemoveAnalysisItem(itemIndex)} className="col-span-1 text-slate-400 hover:text-red-500 flex justify-center">
-                                    <TrashIcon className="h-4 w-4" />
-                                </button>
-                            </div>
-                        ))}
-                        {editableAnalysis.length > 0 && (
-                            <button onClick={handleConfirmAndAdd} className="w-full mt-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 rounded-lg">
-                                Confirm and Add to Inventory
-                            </button>
-                        )}
-                    </div>
-                )}
               </div>
             </div>
           ))}
@@ -355,6 +270,7 @@ const AILabAssistantModal: React.FC<AILabAssistantModalProps> = ({ onClose, comp
                 </>
             )}
             
+            {/* Image Upload and Preview Section */}
             <div className="flex items-center gap-3 mb-3">
                 <label 
                     htmlFor="image-upload-input" 

@@ -1,143 +1,325 @@
-import { Component, Project, BackupData, AnalyticsData, ImageData, Category } from '../types.ts';
-import * as customImageService from './customImageService';
+import { Component, IssueRecord, Category, Project, RequiredComponent, MaintenanceRecord, Attachment } from '../types.ts';
+import { ImageData } from '../components/imageLibrary.ts';
 
-const COMPONENTS_KEY = 'tinkerhub-components';
-const PROJECTS_KEY = 'tinkerhub-projects';
-const ANALYTICS_KEY = 'tinkerhub-analytics';
 
-// Helper to simulate API delay and ensure data consistency
-const simulateAsync = <T>(data: T): Promise<T> => {
-    return new Promise(resolve => setTimeout(() => resolve(data), 100));
+const COMPONENTS_STORAGE_KEY = 'atl-inventory-components';
+const PROJECTS_STORAGE_KEY = 'atl-inventory-projects';
+const IMAGE_LIBRARY_KEY = 'atl-inventory-custom-images';
+const ANALYTICS_KEY = 'atl-inventory-analytics';
+const VISITOR_ID_KEY = 'atl-inventory-visitor-id';
+
+// --- Analytics Types ---
+interface AnalyticsData {
+  totalVisits: number;
+  uniqueVisitors: number;
+  successfulLogins: number;
+}
+
+// --- Component Functions ---
+
+// Helper to get all components from LocalStorage
+const getComponentsFromStorage = (): Component[] => {
+  try {
+    const data = localStorage.getItem(COMPONENTS_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("Could not parse components from LocalStorage", error);
+    return [];
+  }
 };
 
-// --- Component API ---
-export const getComponents = (): Promise<Component[]> => {
-    const data = localStorage.getItem(COMPONENTS_KEY);
-    return simulateAsync(data ? JSON.parse(data) : []);
+// Helper to save all components to LocalStorage
+const saveComponentsToStorage = (components: Component[]): void => {
+  localStorage.setItem(COMPONENTS_STORAGE_KEY, JSON.stringify(components));
 };
 
-export const addComponent = (componentData: Omit<Component, 'id' | 'createdAt'>): Promise<Component> => {
-    const components = JSON.parse(localStorage.getItem(COMPONENTS_KEY) || '[]');
-    const newComponent: Component = {
+export const getComponents = (): Component[] => {
+  const components = getComponentsFromStorage();
+  // Sort by createdAt descending, similar to the original firestore query
+  return components.sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateB - dateA;
+  });
+};
+
+export const addComponent = (component: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>): Component => {
+  const components = getComponentsFromStorage();
+  const newComponent: Component = {
+    ...component,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    isUnderMaintenance: false,
+    maintenanceLog: [],
+  };
+  const updatedComponents = [newComponent, ...components];
+  saveComponentsToStorage(updatedComponents);
+  return newComponent;
+};
+
+// FIX: The type for `componentsToAdd` was too restrictive. It omitted `isUnderMaintenance` and `maintenanceLog`,
+// but these properties can be present in imported data and are used in the function body.
+// The type is updated to `Omit<Component, 'id' | 'createdAt'>[]` to match the data structure from the CSV import.
+export const addMultipleComponents = (componentsToAdd: Omit<Component, 'id' | 'createdAt'>[]): Component[] => {
+  const existingComponents = getComponentsFromStorage();
+  
+  const newComponents: Component[] = componentsToAdd.map(component => ({
+    ...component,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    isUnderMaintenance: component.isUnderMaintenance || false,
+    maintenanceLog: component.maintenanceLog || [],
+  }));
+
+  const updatedComponents = [...newComponents, ...existingComponents];
+  saveComponentsToStorage(updatedComponents);
+
+  return newComponents;
+};
+
+export const updateComponent = (componentToUpdate: Component): void => {
+  let components = getComponentsFromStorage();
+  components = components.map(c => (c.id === componentToUpdate.id ? componentToUpdate : c));
+  saveComponentsToStorage(components);
+};
+
+export const deleteComponent = (id: string): void => {
+  let components = getComponentsFromStorage();
+  components = components.filter(c => c.id !== id);
+  saveComponentsToStorage(components);
+};
+
+export const toggleAvailability = (component: Component): Component => {
+  let components = getComponentsFromStorage();
+  const updatedComponent = { ...component, isAvailable: !component.isAvailable };
+  components = components.map(c => (c.id === component.id ? updatedComponent : c));
+  saveComponentsToStorage(components);
+  return updatedComponent;
+}
+
+export const issueComponent = (id: string, studentName: string, quantity: number): Component => {
+    let components = getComponentsFromStorage();
+    let updatedComponent: Component | undefined;
+
+    const updatedComponents = components.map(c => {
+        if (c.id === id) {
+            const newIssue: IssueRecord = {
+                id: crypto.randomUUID(),
+                studentName,
+                issuedDate: new Date().toISOString(),
+                quantity,
+            };
+            const updatedIssuedTo = [...(c.issuedTo || []), newIssue];
+            updatedComponent = { ...c, issuedTo: updatedIssuedTo };
+            return updatedComponent;
+        }
+        return c;
+    });
+
+    if (!updatedComponent) {
+        throw new Error("Component not found");
+    }
+
+    saveComponentsToStorage(updatedComponents);
+    return updatedComponent;
+};
+
+export const returnIssue = (componentId: string, issueId: string): Component => {
+    let components = getComponentsFromStorage();
+    let updatedComponent: Component | undefined;
+
+    const updatedComponents = components.map(c => {
+        if (c.id === componentId) {
+            const updatedIssuedTo = c.issuedTo.filter(issue => issue.id !== issueId);
+            updatedComponent = { ...c, issuedTo: updatedIssuedTo };
+            return updatedComponent;
+        }
+        return c;
+    });
+
+    if (!updatedComponent) {
+        throw new Error("Component not found");
+    }
+
+    saveComponentsToStorage(updatedComponents);
+    return updatedComponent;
+};
+
+export const clearAllComponents = (): void => {
+    localStorage.removeItem(COMPONENTS_STORAGE_KEY);
+};
+
+// --- Maintenance Functions ---
+
+const findComponent = (components: Component[], id: string): [Component, number] => {
+  const index = components.findIndex(c => c.id === id);
+  if (index === -1) throw new Error("Component not found");
+  return [components[index], index];
+};
+
+export const toggleMaintenanceStatus = (componentId: string): Component => {
+    const components = getComponentsFromStorage();
+    const [component, index] = findComponent(components, componentId);
+    const updatedComponent = { ...component, isUnderMaintenance: !component.isUnderMaintenance };
+    components[index] = updatedComponent;
+    saveComponentsToStorage(components);
+    return updatedComponent;
+};
+
+export const addMaintenanceLog = (componentId: string, notes: string): Component => {
+    const components = getComponentsFromStorage();
+    const [component, index] = findComponent(components, componentId);
+    
+    const newLog: MaintenanceRecord = {
         id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        isUnderMaintenance: false, // Ensure default values as they might be omitted in Omit type
-        maintenanceLog: [],       // Ensure default values
-        ...componentData,
+        date: new Date().toISOString(),
+        notes,
     };
-    components.unshift(newComponent); // Add to the beginning for latest first
-    localStorage.setItem(COMPONENTS_KEY, JSON.stringify(components));
-    return simulateAsync(newComponent);
-};
-
-export const addMultipleComponents = (componentsToAdd: Omit<Component, 'id' | 'createdAt'>[]): Promise<Component[]> => {
-    const existingComponents = JSON.parse(localStorage.getItem(COMPONENTS_KEY) || '[]');
-    const newComponents: Component[] = componentsToAdd.map(c => ({
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        isUnderMaintenance: false,
-        maintenanceLog: [],
-        ...c,
-    }));
-    const updatedComponents = [...newComponents, ...existingComponents];
-    localStorage.setItem(COMPONENTS_KEY, JSON.stringify(updatedComponents));
-    return simulateAsync(newComponents);
-};
-
-export const updateComponent = (componentData: Component): Promise<Component> => {
-    let components = JSON.parse(localStorage.getItem(COMPONENTS_KEY) || '[]');
-    components = components.map((c: Component) => (c.id === componentData.id ? componentData : c));
-    localStorage.setItem(COMPONENTS_KEY, JSON.stringify(components));
-    return simulateAsync(componentData);
-};
-
-export const deleteComponent = (id: string): Promise<void> => {
-    let components = JSON.parse(localStorage.getItem(COMPONENTS_KEY) || '[]');
-    components = components.filter((c: Component) => c.id !== id);
-    localStorage.setItem(COMPONENTS_KEY, JSON.stringify(components));
-    return simulateAsync(undefined);
-};
-
-export const clearAllComponents = (): Promise<void> => {
-    localStorage.removeItem(COMPONENTS_KEY);
-    return simulateAsync(undefined);
-};
-
-// --- Project API ---
-
-export const getProjects = (): Promise<Project[]> => {
-    const data = localStorage.getItem(PROJECTS_KEY);
-    return simulateAsync(data ? JSON.parse(data) : []);
-};
-
-export const addProject = (projectData: Omit<Project, 'id' | 'createdAt'>): Promise<Project> => {
-    const projects = JSON.parse(localStorage.getItem(PROJECTS_KEY) || '[]');
-    const newProject: Project = {
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        ...projectData,
+    
+    const updatedComponent = {
+        ...component,
+        maintenanceLog: [newLog, ...(component.maintenanceLog || [])],
     };
-    projects.unshift(newProject); // Add to the beginning for latest first
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-    return simulateAsync(newProject);
+    
+    components[index] = updatedComponent;
+    saveComponentsToStorage(components);
+    return updatedComponent;
 };
 
-export const updateProject = (projectData: Project): Promise<Project> => {
-    let projects = JSON.parse(localStorage.getItem(PROJECTS_KEY) || '[]');
-    projects = projects.map((p: Project) => (p.id === projectData.id ? projectData : p));
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-    return simulateAsync(projectData);
+export const deleteMaintenanceLog = (componentId: string, logId: string): Component => {
+    const components = getComponentsFromStorage();
+    const [component, index] = findComponent(components, componentId);
+    
+    const updatedComponent = {
+        ...component,
+        maintenanceLog: (component.maintenanceLog || []).filter(log => log.id !== logId),
+    };
+
+    components[index] = updatedComponent;
+    saveComponentsToStorage(components);
+    return updatedComponent;
 };
 
-export const deleteProject = (id: string): Promise<void> => {
-    let projects = JSON.parse(localStorage.getItem(PROJECTS_KEY) || '[]');
-    projects = projects.filter((p: Project) => p.id !== id);
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-    return simulateAsync(undefined);
+
+// --- Project Functions ---
+
+const getProjectsFromStorage = (): Project[] => {
+  try {
+    const data = localStorage.getItem(PROJECTS_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("Could not parse projects from LocalStorage", error);
+    return [];
+  }
 };
 
-export const clearAllProjects = (): Promise<void> => {
-    localStorage.removeItem(PROJECTS_KEY);
-    return simulateAsync(undefined);
+const saveProjectsToStorage = (projects: Project[]): void => {
+  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
 };
 
-// --- Analytics API ---
-const initialAnalytics: AnalyticsData = { totalVisits: 0, uniqueVisitors: 0, successfulLogins: 0 };
-
-export const getAnalyticsData = (): Promise<AnalyticsData> => {
-    const data = localStorage.getItem(ANALYTICS_KEY);
-    return simulateAsync(data ? JSON.parse(data) : initialAnalytics);
+export const getProjects = (): Project[] => {
+  const projects = getProjectsFromStorage();
+  return projects.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 
-const updateAnalytics = async (field: keyof AnalyticsData, increment: number) => {
-    const analytics = await getAnalyticsData();
-    const updatedAnalytics = { ...analytics, [field]: (analytics[field] || 0) + increment };
-    localStorage.setItem(ANALYTICS_KEY, JSON.stringify(updatedAnalytics));
-    return simulateAsync(updatedAnalytics);
+export const addProject = (projectData: Omit<Project, 'id' | 'createdAt'>): Project => {
+  const projects = getProjectsFromStorage();
+  const newProject: Project = {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    // Set default values for all fields from projectData
+    name: projectData.name,
+    teamName: projectData.teamName,
+    teamMembers: projectData.teamMembers,
+    description: projectData.description,
+    features: projectData.features,
+    requiredComponents: projectData.requiredComponents,
+    projectDate: projectData.projectDate,
+    projectLogoUrl: projectData.projectLogoUrl,
+    youtubeUrl: projectData.youtubeUrl,
+    attachments: projectData.attachments,
+  };
+  saveProjectsToStorage([newProject, ...projects]);
+  return newProject;
 };
 
-export const trackVisit = (): Promise<AnalyticsData> => updateAnalytics('totalVisits', 1);
-export const trackLogin = (): Promise<AnalyticsData> => updateAnalytics('successfulLogins', 1);
 
-export const resetAnalyticsData = (): Promise<AnalyticsData> => {
-    localStorage.setItem(ANALYTICS_KEY, JSON.stringify(initialAnalytics));
-    return simulateAsync(initialAnalytics);
+export const updateProject = (projectToUpdate: Project): void => {
+  let projects = getProjectsFromStorage();
+  projects = projects.map(p => (p.id === projectToUpdate.id ? projectToUpdate : p));
+  saveProjectsToStorage(projects);
 };
 
-// --- Backup API ---
-export const exportData = async (): Promise<BackupData> => {
-    const components = await getComponents();
-    const projects = await getProjects();
-    const analytics = await getAnalyticsData();
-    const customImages = customImageService.getCustomImageLibrary();
-
-    return simulateAsync({ components, projects, analytics, customImageLibrary: customImages });
+export const deleteProject = (id: string): void => {
+  let projects = getProjectsFromStorage();
+  projects = projects.filter(p => p.id !== id);
+  saveProjectsToStorage(projects);
 };
 
-export const importData = async (data: BackupData): Promise<void> => {
-    localStorage.setItem(COMPONENTS_KEY, JSON.stringify(data.components || []));
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(data.projects || []));
-    localStorage.setItem(ANALYTICS_KEY, JSON.stringify(data.analytics || initialAnalytics));
-    customImageService.saveCustomImageLibrary(data.customImageLibrary || {});
-    return simulateAsync(undefined);
+
+// --- Custom Image Library Functions ---
+
+export const getCustomImageLibrary = (): Record<string, ImageData[]> => {
+  try {
+    const data = localStorage.getItem(IMAGE_LIBRARY_KEY);
+    return data ? JSON.parse(data) : {};
+  } catch (error) {
+    console.error("Could not parse custom image library from LocalStorage", error);
+    return {};
+  }
+};
+
+export const saveCustomImageLibrary = (library: Record<string, ImageData[]>): void => {
+  localStorage.setItem(IMAGE_LIBRARY_KEY, JSON.stringify(library));
+};
+
+export const updateCustomImageName = (category: Category, imageUrl: string, newName: string): void => {
+  const library = getCustomImageLibrary();
+  if (library[category]) {
+    const imageIndex = library[category].findIndex(img => img.url === imageUrl);
+    if (imageIndex > -1) {
+      library[category][imageIndex].name = newName;
+      saveCustomImageLibrary(library);
+    }
+  }
+};
+
+export const deleteCustomImage = (category: Category, imageUrl: string): void => {
+    const library = getCustomImageLibrary();
+    if (library[category]) {
+        library[category] = library[category].filter(img => img.url !== imageUrl);
+        saveCustomImageLibrary(library);
+    }
+};
+
+
+// --- Analytics Functions ---
+
+export const getAnalyticsData = (): AnalyticsData => {
+  const data = localStorage.getItem(ANALYTICS_KEY);
+  return data ? JSON.parse(data) : { totalVisits: 0, uniqueVisitors: 0, successfulLogins: 0 };
+};
+
+const saveAnalyticsData = (data: AnalyticsData) => {
+  localStorage.setItem(ANALYTICS_KEY, JSON.stringify(data));
+};
+
+export const trackVisit = (): void => {
+  const analytics = getAnalyticsData();
+  let visitorId = localStorage.getItem(VISITOR_ID_KEY);
+
+  if (!visitorId) {
+    visitorId = crypto.randomUUID();
+    localStorage.setItem(VISITOR_ID_KEY, visitorId);
+    analytics.uniqueVisitors += 1;
+  }
+
+  analytics.totalVisits += 1;
+  saveAnalyticsData(analytics);
+};
+
+export const trackSuccessfulLogin = (): void => {
+  const analytics = getAnalyticsData();
+  analytics.successfulLogins += 1;
+  saveAnalyticsData(analytics);
 };

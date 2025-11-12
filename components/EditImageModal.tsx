@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// FIX: The ImageData type should be imported from the central types file.
-import type { ImageData } from '../types.ts';
+import { ImageData } from './imageLibrary.ts';
 
 interface EditImageModalProps {
   image: ImageData | null;

@@ -80,24 +80,4 @@ export interface AISuggestions {
   name: string;
   description: string;
   category: Category;
-  quantity: number;
-  imageUrl?: string;
-}
-
-export interface ImageData {
-  name: string;
-  url: string;
-}
-
-export interface AnalyticsData {
-  totalVisits: number;
-  uniqueVisitors: number;
-  successfulLogins: number;
-}
-
-export interface BackupData {
-    components: Component[];
-    projects: Project[];
-    customImageLibrary: Record<string, ImageData[]>;
-    analytics: AnalyticsData;
 }
