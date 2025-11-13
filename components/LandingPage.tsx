@@ -230,12 +230,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 
                         {/* Other Members */}
                         <div className="mt-12">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-3xl mx-auto">
                                 {otherMembers.map((member, index) => (
-                                    <div key={member.name} ref={el => { sectionsRef.current[13+index] = el; }} className="fade-in-section bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-6 text-center transition-all duration-300 hover:border-sky-400/50 hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-500/10 flex flex-col items-center justify-center aspect-square" style={{ transitionDelay: `${index * 100}ms` }}>
-                                        <UserCircleIcon className="h-16 w-16 text-slate-700 mx-auto mb-3" />
-                                        <h3 className="text-lg font-bold text-white">{member.name}</h3>
-                                        <p className="text-slate-400 mt-1 text-xs">{member.role}</p>
+                                    <div key={member.name} ref={el => { sectionsRef.current[13 + index] = el; }} className="fade-in-section bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 text-center transition-all duration-300 hover:border-sky-400/50 hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-500/10" style={{ transitionDelay: `${(index + 1) * 150}ms` }}>
+                                        <UserCircleIcon className="h-24 w-24 text-slate-700 mx-auto mb-4" />
+                                        <h3 className="text-2xl font-bold text-white">{member.name}</h3>
+                                        <p className="text-slate-400 mt-1">{member.role}</p>
                                     </div>
                                 ))}
                             </div>
