@@ -1,6 +1,5 @@
 
 
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Logo } from './Logo.tsx';
 import { DatabaseIcon, CloudIcon, AIAssistantIcon, ProjectIcon, ImportIcon, MoonIcon, UserCircleIcon, StarIcon } from './Icons.tsx';
@@ -72,6 +71,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         { icon: <ImportIcon />, title: 'Easy Data Migration', description: 'Import and export your entire inventory with simple CSV files.' },
         { icon: <MoonIcon />, title: 'Sleek Interface', description: 'A modern, intuitive design with both light and dark modes for your comfort.' },
     ];
+    
+    const leader = teamMembers.find(m => m.isLeader);
+    const otherMembers = teamMembers.filter(m => !m.isLeader);
+
 
     return (
         <div className="bg-slate-900 text-slate-100 font-sans scroll-smooth">
@@ -199,23 +202,43 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                         <div ref={el => { sectionsRef.current[11] = el; }} className="fade-in-section text-center mb-16">
                             <h2 className="text-3xl md:text-4xl font-bold text-sky-400">Meet the Team</h2>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {teamMembers.map((member, index) => (
-                                <div key={member.name} ref={el => { sectionsRef.current[12+index] = el; }} className="fade-in-section bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 text-center transition-all duration-300 hover:border-sky-400/50 hover:-translate-y-2 hover:shadow-2xl hover:shadow-sky-500/10" style={{ transitionDelay: `${index * 100}ms` }}>
-                                    {member.isLeader ? (
-                                        <div className="flex flex-col items-center mb-4">
-                                            <StarIcon className="h-10 w-10 text-amber-400 mb-2 animate-slow-rotate" />
-                                            <UserCircleIcon className="h-28 w-28 text-slate-700" />
+                        
+                        {/* Leader Card */}
+                        <div ref={el => { sectionsRef.current[12] = el; }} className="fade-in-section max-w-3xl mx-auto">
+                            {leader && (
+                                <div className="relative p-1 bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-400 rounded-2xl shadow-2xl shadow-yellow-500/20">
+                                    <div className="bg-slate-800/80 backdrop-blur-lg rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6">
+                                        <div className="relative flex-shrink-0">
+                                            <div className="w-32 h-32 bg-slate-900 rounded-full flex items-center justify-center border-4 border-amber-400 shadow-lg">
+                                                <span className="text-6xl font-bold text-amber-300" style={{ fontFamily: 'serif', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>A</span>
+                                            </div>
+                                            <div className="absolute -top-3 -right-3">
+                                                <StarIcon className="h-10 w-10 text-amber-400 animate-slow-rotate" style={{ filter: 'drop-shadow(0 0 8px #fcd34d)' }} />
+                                            </div>
                                         </div>
-                                    ) : (
-                                        <UserCircleIcon className="h-28 w-28 text-slate-700 mx-auto mb-4" />
-                                    )}
-                                    <h3 className={`font-bold mt-4 ${member.isLeader ? 'text-3xl text-amber-400' : 'text-2xl text-white'}`}>
-                                        {member.name}
-                                    </h3>
-                                    <p className="text-slate-400 mt-1">{member.role}</p>
+                                        <div>
+                                            <h3 className="text-3xl font-bold text-amber-300 text-center sm:text-left">{leader.name}</h3>
+                                            <p className="text-slate-400 mt-1 text-center sm:text-left">{leader.role}</p>
+                                            <p className="text-slate-500 mt-3 text-sm text-center sm:text-left">
+                                                As the visionary behind TinkerHub, Apoorv leads with a passion for innovation and a commitment to empowering the next generation of creators in Atal Tinkering Labs.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
-                            ))}
+                            )}
+                        </div>
+
+                        {/* Other Members */}
+                        <div className="mt-12">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+                                {otherMembers.map((member, index) => (
+                                    <div key={member.name} ref={el => { sectionsRef.current[13+index] = el; }} className="fade-in-section bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-6 text-center transition-all duration-300 hover:border-sky-400/50 hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-500/10 flex flex-col items-center justify-center aspect-square" style={{ transitionDelay: `${index * 100}ms` }}>
+                                        <UserCircleIcon className="h-16 w-16 text-slate-700 mx-auto mb-3" />
+                                        <h3 className="text-lg font-bold text-white">{member.name}</h3>
+                                        <p className="text-slate-400 mt-1 text-xs">{member.role}</p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </section>

@@ -314,14 +314,15 @@ export const GripVerticalIcon = ({ className = "h-5 w-5" }: { className?: string
     </svg>
 );
 
-export const StarIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+export const StarIcon = ({ className = "h-5 w-5", style }: { className?: string; style?: React.CSSProperties; }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} style={style} viewBox="0 0 20 20" fill="currentColor">
         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.817 2.036a1 1 0 00-.363 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.817-2.036a1 1 0 00-1.176 0l-2.817 2.036c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.363-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
     </svg>
 );
 
-export const CrownIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+// FIX: Added style prop to CrownIcon to allow passing inline styles and fix the TypeScript error.
+export const CrownIcon = ({ className = "h-5 w-5", style }: { className?: string; style?: React.CSSProperties; }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} style={style} viewBox="0 0 20 20" fill="currentColor">
         <path d="M11.07 2.247a.75.75 0 00-2.14 0l-3.5 1.75a.75.75 0 00-.43.655L4.5 8.5l-2.43-1.215a.75.75 0 00-1.015.865l1.48 2.962a.75.75 0 00.43.498l3.465 1.732a.75.75 0 00.655-.078l.056-.042a.75.75 0 01.942 0l.057.042a.75.75 0 00.655.078l3.465-1.732a.75.75 0 00.43-.498l1.48-2.962a.75.75 0 00-1.015-.865L15.5 8.5l-.5-3.848a.75.75 0 00-.43-.655l-3.5-1.75z" />
         <path d="M4 14.5a.75.75 0 000 1.5h12a.75.75 0 000-1.5H4z" />
     </svg>
