@@ -89,6 +89,23 @@
         animation: slow-rotate 8s linear infinite;
       }
       
+      /* New animations for creative cog */
+      @keyframes spin-clockwise {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes spin-counter-clockwise {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(-360deg); }
+      }
+      .animate-spin-slow { animation: spin-clockwise 20s linear infinite; }
+      .animate-spin-medium { animation: spin-clockwise 15s linear infinite; }
+      .animate-spin-fast { animation: spin-clockwise 10s linear infinite; }
+      .animate-spin-slow-reverse { animation: spin-counter-clockwise 20s linear infinite; }
+      .animate-spin-medium-reverse { animation: spin-counter-clockwise 15s linear infinite; }
+      .animate-spin-fast-reverse { animation: spin-counter-clockwise 10s linear infinite; }
+
+
       /* Scrollbar styles for Project Hub */
       .custom-scrollbar::-webkit-scrollbar {
         width: 8px;

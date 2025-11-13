@@ -22,9 +22,7 @@ const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; children: Re
 
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
     const sectionsRef = useRef<Array<HTMLElement | null>>([]);
-    const [isStreamFlowing, setIsStreamFlowing] = useState(false);
-    const [showPulse, setShowPulse] = useState(false);
-
+    
     useEffect(() => {
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -42,22 +40,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         return () => observer.disconnect();
     }, []);
     
-    useEffect(() => {
-        let isMounted = true;
-        const animationTimer = setTimeout(() => {
-            if (!isMounted) return;
-            setIsStreamFlowing(true);
-            setTimeout(() => {
-                if (isMounted) setShowPulse(true);
-            }, 2500); // Animation duration is 2.5s
-        }, 800);
-
-        return () => {
-            isMounted = false;
-            clearTimeout(animationTimer);
-        };
-    }, []);
-
     const teamMembers = [
         { name: 'Apoorv Karanwal', role: 'Team Leader (Knowledge Warriors)', isLeader: true },
         { name: 'Yogesh Singh', role: 'from Knowledge warriors' },
@@ -88,22 +70,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                     opacity: 1;
                     transform: translateY(0);
                 }
-                
-                @keyframes flow-stream {
-                    from { width: 0%; }
-                    to { width: 100%; }
-                }
-                .stream-animation {
-                    animation: flow-stream 2.5s cubic-bezier(0.65, 0, 0.35, 1) forwards;
-                }
-
-                @keyframes pulse-glow {
-                    0%, 100% { box-shadow: 0 0 15px #6366f1, 0 0 25px #6366f1; }
-                    50% { box-shadow: 0 0 25px #818cf8, 0 0 40px #818cf8; }
-                }
-                .animate-pulse-glow {
-                    animation: pulse-glow 2s ease-in-out infinite;
-                }
             `}</style>
             
             <header className="bg-slate-900/70 backdrop-blur-lg shadow-md sticky top-0 z-50">
@@ -120,7 +86,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             
             <main>
                 <section id="welcome" ref={el => { sectionsRef.current[0] = el; }} className="fade-in-section container mx-auto px-6 py-24 md:py-32 text-center overflow-hidden">
-                    <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">
+                     <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">
                         Welcome to... <br />
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-400">
                             TinkerHub
@@ -129,28 +95,24 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                     <p className="mt-4 text-lg text-slate-400 max-w-2xl mx-auto">
                         Seamlessly manage your lab's inventory online. From components to projects, we've got you covered.
                     </p>
-                    <div className="mt-20 relative max-w-5xl mx-auto h-48 flex justify-between items-center px-4">
-                        <div className="text-center z-10 w-44">
-                            <div className="w-28 h-28 mx-auto bg-slate-800 rounded-full flex items-center justify-center shadow-lg border-4 border-slate-700">
-                                <DatabaseIcon />
-                            </div>
-                            <h3 className="text-lg font-semibold text-white mt-3">Your Inventory</h3>
-                        </div>
-                        
-                        <div className="absolute top-1/2 left-44 right-44 h-[6px] -translate-y-1/2">
-                            <div className="w-full h-full bg-slate-700/50 rounded-full" />
-                            {isStreamFlowing && (
-                                <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-500 shadow-[0_0_15px_rgba(14,165,233,0.7)] stream-animation" />
-                            )}
-                        </div>
-
-                        <div className={`text-center z-10 w-44 transition-all duration-500`}>
-                            <div className={`w-28 h-28 mx-auto bg-slate-800 rounded-full flex items-center justify-center shadow-lg border-4 border-slate-700 ${showPulse ? 'animate-pulse-glow' : ''}`}>
-                                <CloudIcon />
-                            </div>
-                            <h3 className="text-lg font-semibold text-white mt-3">Online Application</h3>
+                    
+                    {/* Creative Cog Element */}
+                    <div className="relative w-64 h-64 md:w-80 md:h-80 mx-auto mt-16 mb-8">
+                        <div className="absolute inset-0 border-2 border-slate-700 rounded-full animate-spin-slow-reverse"></div>
+                        <div className="absolute inset-3 border-4 border-slate-800 rounded-full"></div>
+                        <div className="absolute inset-3 rounded-full animate-spin-medium" style={{ background: 'conic-gradient(from 90deg, transparent, #34d39966, transparent 30%, transparent)' }}></div>
+                        <div className="absolute inset-3 rounded-full animate-spin-fast-reverse" style={{ background: 'conic-gradient(from 210deg, transparent, #38bdf888, transparent 30%, transparent)' }}></div>
+                        <div className="absolute inset-8 border-2 border-slate-700/50 rounded-full animate-spin-slow"></div>
+                        <div className="absolute inset-10 border-4 border-slate-800 rounded-full"></div>
+                        <div className="absolute inset-10 rounded-full animate-spin-medium-reverse" style={{ background: 'conic-gradient(from 0deg, #818cf8, #f97316, #34d399, #38bdf8, #818cf8)' }}></div>
+                        <div className="absolute inset-16 bg-slate-900 rounded-full flex items-center justify-center shadow-2xl">
+                            <Logo className="w-16 h-16 opacity-90"/>
                         </div>
                     </div>
+
+                    <button onClick={onGetStarted} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 shadow-lg shadow-indigo-600/30 text-lg transform hover:scale-105 hover:shadow-xl hover:shadow-indigo-500/40">
+                        Get Started Now
+                    </button>
                 </section>
 
                 <section id="features" className="py-24 bg-slate-800/50">

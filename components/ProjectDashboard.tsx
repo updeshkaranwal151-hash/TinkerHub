@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Project, Component, ProjectStatus, ProjectTask, Attachment } from '../types.ts';
 import { EditIcon, TrashIcon, TeamIcon, PlusIcon, FileIcon, VideoIcon, AudioIcon, ImageIcon, PdfIcon, GripVerticalIcon, CheckboxCheckedIcon } from './Icons.tsx';
 
@@ -32,7 +32,6 @@ const FileTypeIcon: React.FC<{ mimeType: string }> = ({ mimeType }) => {
     return <FileIcon className="h-6 w-6 text-slate-300" />;
 };
 
-// FIX: Added `style` prop to allow passing inline styles for animations.
 const Card: React.FC<{ title: string; children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ title, children, className, style }) => (
     <div className={`widget-enter-animation bg-slate-800/50 border border-slate-700 rounded-lg p-5 ${className}`} style={{ opacity: 0, ...style }}>
         <h3 className="text-sm font-semibold text-sky-400 uppercase tracking-wider mb-3">{title}</h3>
@@ -43,9 +42,14 @@ const Card: React.FC<{ title: string; children: React.ReactNode; className?: str
 const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, inventoryComponents, onEdit, onUpdate, onDelete }) => {
     const youtubeEmbedUrl = getYoutubeEmbedUrl(project.youtubeUrl || '');
 
-    const [tasks, setTasks] = useState<ProjectTask[]>(project.tasks || []);
+    const [tasks, setTasks] = useState<ProjectTask[]>([]);
     const [newTaskText, setNewTaskText] = useState('');
-    const [notes, setNotes] = useState(project.notes || '');
+    const [notes, setNotes] = useState('');
+
+    useEffect(() => {
+        setTasks(project.tasks || []);
+        setNotes(project.notes || '');
+    }, [project]);
 
     const statusColors = {
         [ProjectStatus.IN_PROGRESS]: "bg-sky-500/30 text-sky-300 border-sky-500/50",

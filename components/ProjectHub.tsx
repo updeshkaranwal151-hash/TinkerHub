@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Project, Component } from '../types.ts';
 import { PlusIcon, ProjectIcon, SearchIcon } from './Icons.tsx';
 import ProjectDashboard from './ProjectDashboard.tsx';
@@ -28,12 +28,18 @@ const ProjectHub: React.FC<ProjectHubProps> = ({ projects, inventoryComponents, 
     return projects.find(p => p.id === selectedProjectId) || null;
   }, [projects, selectedProjectId]);
   
-  // Auto-select the first project if none is selected and projects exist
-  useState(() => {
-      if (!selectedProjectId && filteredProjects.length > 0) {
-          setSelectedProjectId(filteredProjects[0].id);
-      }
-  });
+  // Effect to manage project selection
+  useEffect(() => {
+    // If no project is selected, select the first one in the filtered list
+    if (!selectedProjectId && filteredProjects.length > 0) {
+      setSelectedProjectId(filteredProjects[0].id);
+    }
+    // If the currently selected project is no longer in the filtered list (e.g., deleted),
+    // update the selection to the first available project or null if none exist.
+    if (selectedProjectId && !filteredProjects.some(p => p.id === selectedProjectId)) {
+      setSelectedProjectId(filteredProjects.length > 0 ? filteredProjects[0].id : null);
+    }
+  }, [filteredProjects, selectedProjectId]);
 
 
   const handleUpdateProjectAndKeepSelection = (updatedProject: Project) => {
