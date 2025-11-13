@@ -283,7 +283,8 @@
         background-color: #f8fafc !important;
         border-color: #e2e8f0 !important;
        }
-       body.light-mode .project-hub-sidebar .bg-slate-800 {
+       body.light-mode .project-hub-sidebar .bg-slate-800,
+       body.light-mode .project-hub-sidebar .bg-slate-900 {
          background-color: #f1f5f9 !important;
        }
        body.light-mode .project-hub-sidebar button:hover {
@@ -292,17 +293,26 @@
        body.light-mode .project-hub-sidebar button[aria-selected="true"] {
          background-color: #eef2ff !important;
          border-color: #6366f1 !important;
+         color: #4338ca !important;
        }
-       body.light-mode .project-dashboard .bg-slate-800\/50 {
+       body.light-mode .project-dashboard-banner {
+         text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+       }
+       body.light-mode .project-dashboard .widget {
          background-color: #ffffff !important;
          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
        }
        body.light-mode .task-item {
-         background-color: #f1f5f9 !important;
+         background-color: #f8fafc !important;
          border-color: #e2e8f0 !important;
        }
        body.light-mode .task-item:has(input:checked) {
          background-color: #f0fdf4 !important;
+         border-color: #bbf7d0 !important;
+       }
+       body.light-mode .task-item:has(input:checked) label {
+         text-decoration: line-through;
+         color: #52525b !important; /* zinc-600 */
        }
 
 

@@ -17,7 +17,7 @@ export interface IssueRecord {
 export enum LinkType {
   DATASHEET = 'Datasheet',
   TUTORIAL = 'Tutorial',
-  PROJECT = 'Project Idea',
+  PROJECT = 'Project',
   OTHER = 'Other',
 }
 
@@ -48,52 +48,78 @@ export interface Component {
   maintenanceLog: MaintenanceRecord[];
 }
 
+export interface AISuggestions {
+  name: string;
+  description: string;
+  category: Category;
+}
+
+export enum ProjectStatus {
+  PLANNED = 'Planned',
+  IN_PROGRESS = 'In Progress',
+  ON_HOLD = 'On Hold',
+  COMPLETED = 'Completed',
+}
+
+export enum ProjectPriority {
+    LOW = 'Low',
+    MEDIUM = 'Medium',
+    HIGH = 'High',
+    URGENT = 'Urgent',
+}
+
 export interface RequiredComponent {
   componentId: string;
-  componentName: string;
+  name: string;
+  quantity: number;
+}
+
+export enum AttachmentType {
+  IMAGE = 'Image',
+  VIDEO = 'Video',
+  AUDIO = 'Audio',
+  PDF = 'PDF',
+  FILE = 'File',
+  LINK = 'Link',
 }
 
 export interface Attachment {
   id: string;
   name: string;
-  type: string; // MIME type
-  size: number; // in bytes
-  dataUrl: string; // base64
-}
-
-export enum ProjectStatus {
-    IN_PROGRESS = 'In Progress',
-    COMPLETED = 'Completed',
-    ON_HOLD = 'On Hold',
+  type: AttachmentType;
+  url: string; // For links or base64 data URLs
+  createdAt: string;
 }
 
 export interface ProjectTask {
-    id: string;
-    text: string;
-    isCompleted: boolean;
+  id: string;
+  text: string;
+  isCompleted: boolean;
 }
-
 
 export interface Project {
   id: string;
-  name: string;
-  teamName: string;
-  teamMembers: string[];
+  title: string;
   description: string;
-  features: string;
-  requiredComponents: RequiredComponent[];
-  createdAt: string;
-  projectDate: string;
-  projectLogoUrl?: string;
-  youtubeUrl?: string;
-  attachments: Attachment[];
+  teamMembers: string[];
   status: ProjectStatus;
+  priority: ProjectPriority;
+  tags: string[];
+  requiredComponents: RequiredComponent[];
+  attachments: Attachment[];
   tasks: ProjectTask[];
-  notes?: string;
+  notes: string;
+  createdAt: string;
+  coverImageUrl?: string;
+  startDate?: string;
+  endDate?: string;
+  budget?: number;
+  projectLead?: string;
+  visibility: 'Public' | 'Private';
 }
 
-export interface AISuggestions {
-  name: string;
-  description: string;
-  category: Category;
+export interface AccessLogRecord {
+  id: string;
+  timestamp: string;
+  userAgent: string;
 }

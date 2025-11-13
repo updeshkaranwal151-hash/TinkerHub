@@ -1,19 +1,17 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
-import { Component, IssueRecord, Category, Project, MaintenanceRecord, AISuggestions } from './types.ts';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Component, IssueRecord, Category, AISuggestions, Project, ProjectStatus, ProjectTask } from './types.ts';
 import Header from './components/Header.tsx';
 import ComponentCard from './components/ComponentCard.tsx';
 import AddComponentModal from './components/AddComponentModal.tsx';
 import EditComponentModal from './components/EditComponentModal.tsx';
 import IssueComponentModal from './components/IssueComponentModal.tsx';
 import ShareModal from './components/ShareModal.tsx';
-import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon, AIAssistantIcon, EmptyStateIcon, ProjectIcon, WarningIcon } from './components/Icons.tsx';
+import { PlusIcon, SearchIcon, ArrowUpIcon, ArrowDownIcon, AIAssistantIcon, EmptyStateIcon, WarningIcon } from './components/Icons.tsx';
 import PasswordProtection from './components/PasswordProtection.tsx';
 import * as localStorageService from './services/localStorageService.ts';
 import AILabAssistantModal from './components/AILabAssistantModal.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
 import { imageLibrary as defaultImageLibrary, ImageData } from './components/imageLibrary.ts';
-import ProjectModal from './components/ProjectModal.tsx';
 import ImportCSVModal from './components/ImportCSVModal.tsx';
 import MaintenanceModal from './components/MaintenanceModal.tsx';
 import LandingPage from './components/LandingPage.tsx';
@@ -25,7 +23,6 @@ import ProjectHub from './components/ProjectHub.tsx';
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
 type SortDirection = 'ascending' | 'descending';
-type ViewMode = 'inventory' | 'projects';
 
 interface SortConfig {
   key: SortKey;
@@ -54,28 +51,33 @@ const App: React.FC = () => {
   const [showLandingPage, setShowLandingPage] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  // App State
+  const [currentView, setCurrentView] = useState<'inventory' | 'projects'>('inventory');
   const [components, setComponents] = useState<Component[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+
   const [imageLibrary, setImageLibrary] = useState(getMergedImageLibrary());
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isAssistantModalOpen, setIsAssistantModalOpen] = useState(false);
-  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [isScanResultModalOpen, setIsScanResultModalOpen] = useState(false);
+  
+  // Component-specific states
   const [componentToEdit, setComponentToEdit] = useState<Component | null>(null);
-  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const [componentToIssue, setComponentToIssue] = useState<Component | null>(null);
   const [componentForMaintenance, setComponentForMaintenance] = useState<Component | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'default', direction: 'ascending' });
-  const [viewMode, setViewMode] = useState<ViewMode>('inventory');
   const [scannedImageData, setScannedImageData] = useState<string | null>(null);
 
   const [isLightMode, setIsLightMode] = useState<boolean>(() => {
@@ -94,20 +96,16 @@ const App: React.FC = () => {
 
   useEffect(() => {
     localStorageService.trackVisit();
+    localStorageService.trackAccess(); // Log device access
   }, []);
 
   useEffect(() => {
     if (isLightMode) {
       document.body.classList.add('light-mode');
-      document.body.classList.remove('bg-slate-900', 'text-slate-100');
-      document.body.classList.add('bg-slate-100', 'text-slate-900');
-      localStorage.setItem('theme', 'light');
     } else {
       document.body.classList.remove('light-mode');
-      document.body.classList.remove('bg-slate-100', 'text-slate-900');
-      document.body.classList.add('bg-slate-900', 'text-slate-100');
-      localStorage.setItem('theme', 'dark');
     }
+    localStorage.setItem('theme', isLightMode ? 'light' : 'dark');
   }, [isLightMode]);
 
   useEffect(() => {
@@ -115,8 +113,8 @@ const App: React.FC = () => {
         setIsLoading(true);
         try {
             const componentData = localStorageService.getComponents();
-            setComponents(componentData);
             const projectData = localStorageService.getProjects();
+            setComponents(componentData);
             setProjects(projectData);
             setImageLibrary(getMergedImageLibrary()); // Ensure image library is up-to-date
         } catch (err) {
@@ -239,31 +237,6 @@ const App: React.FC = () => {
       setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
       setComponentForMaintenance(updatedComponent);
   };
-
-  const handleAddProject = (newProjectData: Omit<Project, 'id' | 'createdAt' | 'status' | 'tasks'>) => {
-      const newProject = localStorageService.addProject(newProjectData);
-      setProjects(prev => [newProject, ...prev]);
-      setIsProjectModalOpen(false);
-  };
-
-  const handleUpdateProject = (updatedProjectData: Project) => {
-      localStorageService.updateProject(updatedProjectData);
-      setProjects(projects.map(p => p.id === updatedProjectData.id ? updatedProjectData : p));
-      setIsProjectModalOpen(false);
-      setProjectToEdit(null);
-  };
-
-  const handleDeleteProject = (projectId: string) => {
-      if (window.confirm('Are you sure you want to delete this project?')) {
-          localStorageService.deleteProject(projectId);
-          setProjects(prev => prev.filter(p => p.id !== projectId));
-      }
-  };
-  
-  const handleOpenEditProjectModal = (project: Project) => {
-      setProjectToEdit(project);
-      setIsProjectModalOpen(true);
-  };
   
   const handleExportCSV = () => {
     if (components.length === 0) {
@@ -313,6 +286,25 @@ const App: React.FC = () => {
       setIsImportModalOpen(false);
       alert(`${newComponents.length} components were successfully imported!`);
   };
+
+  // Project Handlers
+  const handleAddProject = (projectData: Omit<Project, 'id' | 'createdAt' | 'attachments' | 'requiredComponents'>) => {
+      const newProject = localStorageService.addProject(projectData);
+      setProjects(prev => [newProject, ...prev]);
+  };
+
+  const handleUpdateProject = (updatedProject: Project) => {
+      localStorageService.updateProject(updatedProject);
+      setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+      if (window.confirm('Are you sure you want to permanently delete this project? This action cannot be undone.')) {
+          localStorageService.deleteProject(projectId);
+          setProjects(prev => prev.filter(p => p.id !== projectId));
+      }
+  };
+
 
   const filteredComponents = useMemo(() => components.filter(component => {
     const matchesSearch = component.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -374,8 +366,6 @@ const App: React.FC = () => {
           onLibraryUpdate={() => setImageLibrary(getMergedImageLibrary())}
           components={components}
           setComponents={setComponents}
-          projects={projects}
-          setProjects={setProjects}
           imageLibrary={imageLibrary}
           isLightMode={isLightMode}
           onToggleLightMode={() => setIsLightMode(prev => !prev)}
@@ -384,172 +374,149 @@ const App: React.FC = () => {
           onOpenMaintenanceModal={handleOpenMaintenanceModal}
           onToggleMaintenance={handleToggleMaintenance}
           onDeleteComponent={handleDeleteComponent}
-          onOpenEditProjectModal={handleOpenEditProjectModal}
-          onDeleteProject={handleDeleteProject}
-          onUpdateProject={handleUpdateProject}
-          onOpenProjectModal={() => { setProjectToEdit(null); setIsProjectModalOpen(true); }}
       />
     );
   }
 
   return (
-    <div className={`min-h-screen font-sans flex flex-col ${isLightMode ? 'text-slate-900' : 'text-slate-100'}`}>
+    <div className={`min-h-screen font-sans flex flex-col`}>
       <Header 
         onAddComponent={() => setIsAddModalOpen(true)}
-        onAddProject={() => { setProjectToEdit(null); setIsProjectModalOpen(true); }}
         onOpenScanner={handleOpenScanner}
         onClearAll={handleClearAllComponents}
         onOpenShareModal={() => setIsShareModalOpen(true)}
         onOpenImportModal={() => setIsImportModalOpen(true)}
         onExport={handleExportCSV}
-        viewMode={viewMode}
         isLightMode={isLightMode}
         onToggleLightMode={() => setIsLightMode(prev => !prev)}
+        currentView={currentView}
+        onSetView={setCurrentView}
       />
       
-      <main className="container mx-auto p-4 md:p-8 flex-grow flex flex-col">
-        <div className="flex-shrink-0 flex justify-center mb-6 border-b border-slate-700/50">
-            <button
-              onClick={() => { setViewMode('inventory'); }}
-              className={`py-3 px-6 text-base font-semibold transition-colors duration-300 rounded-t-lg ${viewMode === 'inventory' ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-white'}`}
-            >
-              Inventory
-            </button>
-            <button
-              onClick={() => setViewMode('projects')}
-              className={`py-3 px-6 text-base font-semibold transition-colors duration-300 rounded-t-lg ${viewMode === 'projects' ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-white'}`}
-            >
-              Projects
-            </button>
-        </div>
+      {currentView === 'inventory' ? (
+        <main className="container mx-auto p-4 md:p-8 flex-grow flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-sky-400">Inventory Dashboard</h2>
+          </div>
 
-        {viewMode === 'inventory' && (
-          <>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold text-sky-400">Inventory Dashboard</h2>
-            </div>
-
-            {lowStockComponents.length > 0 && (
-              <div className="mb-6 p-4 bg-yellow-900/50 border border-yellow-700 rounded-lg animate-pulse hover:animate-none">
-                <div className="flex items-center gap-3">
-                  <WarningIcon className="text-yellow-400 h-6 w-6 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-bold text-yellow-300">Low Stock Alert!</h3>
-                    <p className="text-sm text-yellow-400">
-                      The following components are running low: {lowStockComponents.map(c => `${c.name} (${c.totalQuantity - (c.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0)} left)`).join(', ')}. Consider re-stocking soon.
-                    </p>
-                  </div>
+          {lowStockComponents.length > 0 && (
+            <div className="mb-6 p-4 bg-yellow-900/50 border border-yellow-700 rounded-lg animate-pulse hover:animate-none">
+              <div className="flex items-center gap-3">
+                <WarningIcon className="text-yellow-400 h-6 w-6 flex-shrink-0" />
+                <div>
+                  <h3 className="font-bold text-yellow-300">Low Stock Alert!</h3>
+                  <p className="text-sm text-yellow-400">
+                    The following components are running low: {lowStockComponents.map(c => `${c.name} (${c.totalQuantity - (c.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0)} left)`).join(', ')}. Consider re-stocking soon.
+                  </p>
                 </div>
               </div>
-            )}
-
-            <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between p-4 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-lg">
-                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto flex-grow">
-                  <div className="relative flex-grow">
-                      <input
-                          type="text"
-                          placeholder="Search by component name..."
-                          value={searchQuery}
-                          onChange={e => setSearchQuery(e.target.value)}
-                          className="w-full bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          aria-label="Search components"
-                      />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <SearchIcon />
-                      </div>
-                  </div>
-                  <select
-                      value={categoryFilter}
-                      onChange={e => setCategoryFilter(e.target.value as Category | 'all')}
-                      className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      aria-label="Filter by category"
-                  >
-                      <option value="all">All Categories</option>
-                      {Object.values(Category).map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                  </select>
-                </div>
-                <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end">
-                    <select
-                        value={sortConfig.key}
-                        onChange={e => setSortConfig({ ...sortConfig, key: e.target.value as SortKey })}
-                        className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        aria-label="Sort by"
-                    >
-                        <option value="default">Default Sort</option>
-                        <option value="name">Name</option>
-                        <option value="category">Category</option>
-                        <option value="availability">Availability</option>
-                    </select>
-                    <button
-                        onClick={() => setSortConfig({ ...sortConfig, direction: sortConfig.direction === 'ascending' ? 'descending' : 'ascending' })}
-                        disabled={sortConfig.key === 'default'}
-                        className="p-2 bg-slate-800 border border-slate-700 rounded-md shadow-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-                        aria-label={`Sort ${sortConfig.direction === 'ascending' ? 'descending' : 'ascending'}`}
-                    >
-                        {sortConfig.direction === 'ascending' ? <ArrowUpIcon /> : <ArrowDownIcon />}
-                    </button>
-                </div>
             </div>
-            
-            {isLoading ? (
-                <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
-                    <h3 className="text-xl font-semibold text-slate-300 animate-pulse">Loading Inventory...</h3>
-                </div>
-            ) : components.length > 0 ? (
-                sortedAndFilteredComponents.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {sortedAndFilteredComponents.map((component, index) => (
-                        <ComponentCard
-                        key={component.id}
-                        component={component}
-                        index={index}
-                        onDelete={handleDeleteComponent}
-                        onOpenIssueModal={handleOpenIssueModal}
-                        onReturnIssue={handleReturnIssue}
-                        onOpenEditModal={handleOpenEditModal}
-                        onToggleAvailability={handleToggleAvailability}
-                        onOpenMaintenanceModal={handleOpenMaintenanceModal}
-                        />
-                    ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
-                        <h3 className="text-xl font-semibold text-slate-300">No components found</h3>
-                        <p className="text-slate-500 mt-2">Try adjusting your search or filter criteria.</p>
-                    </div>
-                )
-            ) : (
-                <div className="text-center py-16 px-6 bg-slate-800/80 backdrop-blur-sm rounded-lg border border-slate-700">
-                    <div className="flex justify-center mb-4 text-sky-500">
-                        <EmptyStateIcon />
-                    </div>
-                    <h3 className="text-2xl font-bold text-slate-200">Your inventory is empty!</h3>
-                    <p className="text-slate-400 mt-2">Let's add your first component to get started.</p>
-                    <button
-                        onClick={() => setIsAddModalOpen(true)}
-                        className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-indigo-600/30 transform hover:scale-105"
-                    >
-                        <PlusIcon />
-                        Add Your First Component
-                    </button>
-                </div>
-            )}
-          </>
-        )}
+          )}
 
-        {viewMode === 'projects' && (
-          <ProjectHub
-            projects={projects}
-            inventoryComponents={components}
-            onOpenProjectModal={() => { setProjectToEdit(null); setIsProjectModalOpen(true); }}
-            onEditProject={handleOpenEditProjectModal}
-            onUpdateProject={handleUpdateProject}
-            onDeleteProject={handleDeleteProject}
-          />
-        )}
-      </main>
+          <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between p-4 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-lg">
+              <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto flex-grow">
+                <div className="relative flex-grow">
+                    <input
+                        type="text"
+                        placeholder="Search by component name..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        aria-label="Search components"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <SearchIcon />
+                    </div>
+                </div>
+                <select
+                    value={categoryFilter}
+                    onChange={e => setCategoryFilter(e.target.value as Category | 'all')}
+                    className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    aria-label="Filter by category"
+                >
+                    <option value="all">All Categories</option>
+                    {Object.values(Category).map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end">
+                  <select
+                      value={sortConfig.key}
+                      onChange={e => setSortConfig({ ...sortConfig, key: e.target.value as SortKey })}
+                      className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      aria-label="Sort by"
+                  >
+                      <option value="default">Default Sort</option>
+                      <option value="name">Name</option>
+                      <option value="category">Category</option>
+                      <option value="availability">Availability</option>
+                  </select>
+                  <button
+                      onClick={() => setSortConfig({ ...sortConfig, direction: sortConfig.direction === 'ascending' ? 'descending' : 'ascending' })}
+                      disabled={sortConfig.key === 'default'}
+                      className="p-2 bg-slate-800 border border-slate-700 rounded-md shadow-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                      aria-label={`Sort ${sortConfig.direction === 'ascending' ? 'descending' : 'ascending'}`}
+                  >
+                      {sortConfig.direction === 'ascending' ? <ArrowUpIcon /> : <ArrowDownIcon />}
+                  </button>
+              </div>
+          </div>
+          
+          {isLoading ? (
+              <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
+                  <h3 className="text-xl font-semibold text-slate-300 animate-pulse">Loading Inventory...</h3>
+              </div>
+          ) : components.length > 0 ? (
+              sortedAndFilteredComponents.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {sortedAndFilteredComponents.map((component, index) => (
+                      <ComponentCard
+                      key={component.id}
+                      component={component}
+                      index={index}
+                      onDelete={handleDeleteComponent}
+                      onOpenIssueModal={handleOpenIssueModal}
+                      onReturnIssue={handleReturnIssue}
+                      onOpenEditModal={handleOpenEditModal}
+                      onToggleAvailability={handleToggleAvailability}
+                      onOpenMaintenanceModal={handleOpenMaintenanceModal}
+                      />
+                  ))}
+                  </div>
+              ) : (
+                  <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
+                      <h3 className="text-xl font-semibold text-slate-300">No components found</h3>
+                      <p className="text-slate-500 mt-2">Try adjusting your search or filter criteria.</p>
+                  </div>
+              )
+          ) : (
+              <div className="text-center py-16 px-6 bg-slate-800/80 backdrop-blur-sm rounded-lg border border-slate-700">
+                  <div className="flex justify-center mb-4 text-sky-500">
+                      <EmptyStateIcon />
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-200">Your inventory is empty!</h3>
+                  <p className="text-slate-400 mt-2">Let's add your first component to get started.</p>
+                  <button
+                      onClick={() => setIsAddModalOpen(true)}
+                      className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-indigo-600/30 transform hover:scale-105"
+                  >
+                      <PlusIcon />
+                      Add Your First Component
+                  </button>
+              </div>
+          )}
+        </main>
+      ) : (
+        <ProjectHub
+          projects={projects}
+          inventoryComponents={components}
+          onAddProject={handleAddProject}
+          onUpdateProject={handleUpdateProject}
+          onDeleteProject={handleDeleteProject}
+        />
+      )}
+
 
       {isAddModalOpen && (
         <AddComponentModal
@@ -570,19 +537,6 @@ const App: React.FC = () => {
           imageLibrary={imageLibrary}
         />
       )}
-
-       {isProjectModalOpen && (
-            <ProjectModal
-                onClose={() => {
-                    setIsProjectModalOpen(false);
-                    setProjectToEdit(null);
-                }}
-                onSave={projectToEdit ? handleUpdateProject : handleAddProject}
-                existingProject={projectToEdit}
-                availableComponents={components}
-            />
-        )}
-
 
       {isIssueModalOpen && (
         <IssueComponentModal
@@ -650,7 +604,7 @@ const App: React.FC = () => {
         <AIAssistantIcon />
       </button>
 
-      <footer className="text-center text-slate-500 text-sm py-4 border-t border-slate-800/50 mt-8">
+      <footer className="text-center text-slate-500 text-sm py-4 border-t border-slate-800/50 mt-auto">
         this app is made with ❤️ by Apoorv karanwal
       </footer>
     </div>

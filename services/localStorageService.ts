@@ -1,5 +1,4 @@
-
-import { Component, IssueRecord, Category, Project, RequiredComponent, MaintenanceRecord, Attachment, ProjectStatus } from '../types.ts';
+import { Component, IssueRecord, Category, Project, RequiredComponent, MaintenanceRecord, Attachment, ProjectStatus, ProjectTask, ProjectPriority, AccessLogRecord } from '../types.ts';
 import { ImageData } from '../components/imageLibrary.ts';
 
 
@@ -10,6 +9,7 @@ const ANALYTICS_KEY = 'atl-inventory-analytics';
 const VISITOR_ID_KEY = 'atl-inventory-visitor-id';
 const ADMIN_PASSWORD_KEY = 'atl-admin-password';
 const USER_PASSWORD_KEY = 'atl-user-password';
+const ACCESS_LOG_KEY = 'atl-inventory-access-log';
 
 
 // --- Analytics Types ---
@@ -226,15 +226,18 @@ export const getProjects = (): Project[] => {
   return projects.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 
-export const addProject = (projectData: Omit<Project, 'id' | 'createdAt' | 'status' | 'tasks' | 'notes'>): Project => {
+export const addProject = (projectData: Omit<Project, 'id' | 'createdAt' | 'attachments' | 'requiredComponents'>): Project => {
   const projects = getProjectsFromStorage();
   const newProject: Project = {
     ...projectData,
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
-    status: ProjectStatus.IN_PROGRESS,
-    tasks: [],
-    notes: '',
+    attachments: [],
+    requiredComponents: [],
+    priority: projectData.priority || ProjectPriority.MEDIUM,
+    tags: projectData.tags || [],
+    visibility: projectData.visibility || 'Public',
+    coverImageUrl: projectData.coverImageUrl || `https://placehold.co/600x400/1e293b/475569/png?text=${encodeURIComponent(projectData.title)}`
   };
   saveProjectsToStorage([newProject, ...projects]);
   return newProject;
@@ -321,6 +324,38 @@ export const trackSuccessfulLogin = (): void => {
   saveAnalyticsData(analytics);
 };
 
+// --- Access Log Functions ---
+export const getAccessLog = (): AccessLogRecord[] => {
+    try {
+        const data = localStorage.getItem(ACCESS_LOG_KEY);
+        return data ? JSON.parse(data) : [];
+    } catch (error) {
+        console.error("Could not parse access log from LocalStorage", error);
+        return [];
+    }
+};
+
+const saveAccessLog = (log: AccessLogRecord[]): void => {
+    localStorage.setItem(ACCESS_LOG_KEY, JSON.stringify(log));
+};
+
+export const trackAccess = (): void => {
+    const log = getAccessLog();
+    const newEntry: AccessLogRecord = {
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+    };
+    // Keep the log from getting excessively large, cap at 1000 entries
+    const updatedLog = [newEntry, ...log].slice(0, 1000);
+    saveAccessLog(updatedLog);
+};
+
+export const clearAccessLog = (): void => {
+    localStorage.removeItem(ACCESS_LOG_KEY);
+};
+
+
 // --- Password Management Functions ---
 export const getAdminPassword = (): string | null => {
   return localStorage.getItem(ADMIN_PASSWORD_KEY);
@@ -375,6 +410,7 @@ export const clearAllAppData = (): void => {
   localStorage.removeItem(IMAGE_LIBRARY_KEY);
   localStorage.removeItem(ANALYTICS_KEY);
   localStorage.removeItem(VISITOR_ID_KEY); // Also clear visitor ID
+  localStorage.removeItem(ACCESS_LOG_KEY); // Also clear access log
   localStorage.removeItem(ADMIN_PASSWORD_KEY);
   localStorage.removeItem(USER_PASSWORD_KEY);
-};
+}

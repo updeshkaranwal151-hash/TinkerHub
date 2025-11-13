@@ -1,13 +1,11 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Category, Component, Project, ProjectStatus } from '../types.ts';
+import { Category, Component, AccessLogRecord } from '../types.ts';
 import * as localStorageService from '../services/localStorageService.ts';
-import { UploadIcon, TrashIcon, EditIcon, EyeIcon, UserIcon, CheckCircleIcon, DatabaseIcon, MaintenanceIcon, WarningIcon, PlusIcon, ProjectIcon, ArrowUpIcon, ArrowDownIcon, SearchIcon, LinkIcon, MoonIcon, SunIcon } from './Icons.tsx'; // Updated imports for new icons
+import { UploadIcon, TrashIcon, EditIcon, EyeIcon, CheckCircleIcon, DatabaseIcon, MaintenanceIcon, WarningIcon, ArrowUpIcon, ArrowDownIcon, SearchIcon, LinkIcon, MoonIcon, SunIcon, UserIcon, ArrowLeftIcon, ClipboardListIcon } from './Icons.tsx'; // Updated imports for new icons
 import EditImageModal from './EditImageModal.tsx';
 import ConfirmDialog from './ConfirmDialog.tsx';
-import EditComponentModal from './EditComponentModal.tsx';
-import MaintenanceModal from './MaintenanceModal.tsx';
-import ProjectModal from './ProjectModal.tsx';
 import AdminImportExportModal from './AdminImportExportModal.tsx';
 import { ImageData } from './imageLibrary.ts'; // Corrected import path for ImageData
 
@@ -16,8 +14,6 @@ interface AdminPanelProps {
   onLibraryUpdate: () => void;
   components: Component[];
   setComponents: React.Dispatch<React.SetStateAction<Component[]>>;
-  projects: Project[];
-  setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   imageLibrary: Record<string, ImageData[]>;
   isLightMode: boolean;
   onToggleLightMode: () => void;
@@ -26,19 +22,72 @@ interface AdminPanelProps {
   onOpenMaintenanceModal: (component: Component) => void;
   onToggleMaintenance: (componentId: string) => void;
   onDeleteComponent: (id: string) => void;
-  onOpenEditProjectModal: (project: Project) => void;
-  onDeleteProject: (projectId: string) => void;
-  onUpdateProject: (project: Project) => void;
-  onOpenProjectModal: () => void; // For adding new projects from admin
 }
 
-type AdminTab = 'analytics' | 'inventory' | 'projects' | 'image-library' | 'settings';
+type AdminTab = 'analytics' | 'inventory' | 'student-issues' | 'image-library' | 'settings' | 'access-log';
+
+// Helper to parse user agent strings into a more readable format
+const parseUserAgent = (ua: string): string => {
+    // Browser
+    let browser = 'Unknown Browser';
+    const browserRegex = [
+        /(edg|edge)\/([\d.]+)/i,
+        /(firefox)\/([\d.]+)/i,
+        /(chrome)\/([\d.]+)/i,
+        /(safari)\/([\d.]+)/i,
+    ];
+    for (const regex of browserRegex) {
+        const match = ua.match(regex);
+        if (match) {
+            // Safari is often in other user agents, so check it's not Chrome/Edge
+            if (match[1].toLowerCase() === 'safari' && /chrome|edg/i.test(ua)) continue;
+            browser = `${match[1]} ${match[2]}`;
+            break;
+        }
+    }
+
+    // Operating System
+    let os = 'Unknown OS';
+    const osRegex = [
+        { r: /windows nt 10\.0/i, o: 'Windows 10' },
+        { r: /windows nt 6\.3/i, o: 'Windows 8.1' },
+        { r: /windows nt 6\.2/i, o: 'Windows 8' },
+        { r: /windows nt 6\.1/i, o: 'Windows 7' },
+        { r: /mac os x ([\d._]+)/i, o: 'macOS' },
+        { r: /android ([\d.]+)/i, o: 'Android' },
+        { r: /(iphone|ipad|ipod).*os ([\d_]+)/i, o: 'iOS' },
+        { r: /linux/i, o: 'Linux' },
+    ];
+    for (const { r, o } of osRegex) {
+        const match = ua.match(r);
+        if (match) {
+            os = o;
+            if (match[1]) os += ` ${match[1].replace(/_/g, '.')}`;
+            break;
+        }
+    }
+
+    // Device (simple check for mobile models in parentheses)
+    let device = '';
+    const mobileDeviceMatch = ua.match(/\(([^;]+;)([^)]+)\)/);
+    if (mobileDeviceMatch && mobileDeviceMatch[2] && /android|iphone|ipad/i.test(ua)) {
+        device = mobileDeviceMatch[2].trim();
+        // Avoid picking up generic "Mobile" or build numbers
+        if (/build|mobile/i.test(device)) {
+             const potentialDevice = mobileDeviceMatch[1].replace(/;/,'').trim();
+             if (!/linux|android/i.test(potentialDevice)) device = potentialDevice;
+             else device = '';
+        }
+    }
+    
+    return device ? `${device} (${os}) - ${browser}` : `${os} - ${browser}`;
+};
+
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ 
-    onExit, onLibraryUpdate, components, setComponents, projects, setProjects, 
+    onExit, onLibraryUpdate, components, setComponents, 
     imageLibrary, isLightMode, onToggleLightMode,
-    onOpenEditModal, onOpenMaintenanceModal, onToggleMaintenance, onDeleteComponent,
-    onOpenEditProjectModal, onDeleteProject, onUpdateProject, onOpenProjectModal
+    onOpenEditModal, onOpenMaintenanceModal, onToggleMaintenance, onDeleteComponent
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('analytics');
   const [customLibrary, setCustomLibrary] = useState<Record<string, ImageData[]>>({});
@@ -61,20 +110,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState<Category | 'all'>('all');
   const [inventorySortConfig, setInventorySortConfig] = useState<{ key: 'name' | 'category' | 'quantity' | 'available' | 'maintenance' | 'default', direction: 'ascending' | 'descending' }>({ key: 'default', direction: 'ascending' });
   const [bulkChangeCategory, setBulkChangeCategory] = useState<Category>(Category.GENERAL);
+  
+  // Student Issues states
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  
+  // Access Log states
+  const [accessLog, setAccessLog] = useState<AccessLogRecord[]>([]);
+  const [logSearchQuery, setLogSearchQuery] = useState('');
 
-  // Project Management states
-  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
-  const [projectSearchQuery, setProjectSearchQuery] = useState('');
-  const [projectStatusFilter, setProjectStatusFilter] = useState<ProjectStatus | 'all'>('all');
-  const [projectSortConfig, setProjectSortConfig] = useState<{ key: 'name' | 'team' | 'date' | 'status' | 'default', direction: 'ascending' | 'descending' }>({ key: 'default', direction: 'ascending' });
 
-  // Settings states
-  // Removed password related states:
-  // const [adminPassword, setAdminPassword] = useState('');
-  // const [userPassword, setUserPassword] = useState('');
-  // const [currentAdminPassword, setCurrentAdminPassword] = useState('');
-  // const [currentUserPassword, setCurrentUserPassword] = useState('');
-  // const [passwordChangeError, setPasswordChangeError] = useState<string | null>(null);
   const [isImportExportModalOpen, setIsImportExportModalOpen] = useState(false);
 
 
@@ -82,10 +127,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   useEffect(() => {
     setCustomLibrary(localStorageService.getCustomImageLibrary());
     setAnalyticsData(localStorageService.getAnalyticsData());
-    // Removed password initialization:
-    // setAdminPassword(localStorageService.getAdminPassword() || '');
-    // setUserPassword(localStorageService.getUserPassword() || '');
-  }, [components, projects, imageLibrary]); // Re-run if data in App.tsx changes
+    setAccessLog(localStorageService.getAccessLog());
+  }, [components, imageLibrary]); // Re-run if data in App.tsx changes
+  
+  useEffect(() => {
+    // Reset specific states when tab changes to avoid stale selections
+    setSelectedStudent(null);
+    setStudentSearchQuery('');
+    setLogSearchQuery('');
+  }, [activeTab]);
 
   // Analytics calculations
   const totalAvailableComponents = useMemo(() => {
@@ -229,8 +279,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             valA = a.totalQuantity; valB = b.totalQuantity;
             break;
           case 'available':
-            valA = a.totalQuantity - (a.issuedTo?.length || 0);
-            valB = b.totalQuantity - (b.issuedTo?.length || 0);
+            valA = a.totalQuantity - (a.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0);
+            valB = b.totalQuantity - (b.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0);
             break;
           case 'maintenance':
             valA = a.isUnderMaintenance ? 1 : 0; valB = b.isUnderMaintenance ? 1 : 0;
@@ -268,7 +318,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   const executeBulkAction = (type: string, payload?: any) => {
-    if (selectedComponentIds.size === 0) {
+    if (selectedComponentIds.size === 0 && !['clear-all-data', 'clear-access-log'].includes(type)) {
       alert('Please select at least one component.');
       return;
     }
@@ -319,22 +369,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       case 'clear-all-data':
         localStorageService.clearAllAppData();
         setComponents([]);
-        setProjects([]);
         setCustomLibrary({});
         setAnalyticsData(localStorageService.getAnalyticsData());
-        // Removed password state updates:
-        // setAdminPassword('');
-        // setUserPassword('');
+        setAccessLog([]);
         alertMessage = "All application data has been cleared.";
         onExit(); // Exit admin view after clearing all data
         break;
-      case 'delete-selected-projects':
-        selectedProjectIds.forEach(id => {
-          localStorageService.deleteProject(id);
-        });
-        setProjects(prev => prev.filter(p => !selectedProjectIds.has(p.id)));
-        alertMessage = `${selectedProjectIds.size} projects deleted.`;
-        setSelectedProjectIds(new Set()); // Clear selection
+      case 'clear-access-log':
+        localStorageService.clearAccessLog();
+        setAccessLog([]);
+        alertMessage = 'Access log cleared successfully.';
         break;
       default:
         break;
@@ -351,90 +395,44 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     setShowConfirmDialog(false);
     setConfirmAction(null);
   };
-
-  // Project table logic
-  const filteredAndSortedProjects = useMemo(() => {
-    let filtered = projects.filter(project => {
-      const matchesSearch = project.name.toLowerCase().includes(projectSearchQuery.toLowerCase()) ||
-                            project.teamName.toLowerCase().includes(projectSearchQuery.toLowerCase());
-      const matchesStatus = projectStatusFilter === 'all' || project.status === projectStatusFilter;
-      return matchesSearch && matchesStatus;
-    });
-
-    if (projectSortConfig.key !== 'default') {
-      filtered.sort((a, b) => {
-        let valA: any, valB: any;
-        switch (projectSortConfig.key) {
-          case 'name':
-            valA = a.name.toLowerCase(); valB = b.name.toLowerCase();
-            break;
-          case 'team':
-            valA = a.teamName.toLowerCase(); valB = b.teamName.toLowerCase();
-            break;
-          case 'date':
-            valA = new Date(a.projectDate).getTime(); valB = new Date(b.projectDate).getTime();
-            break;
-          case 'status':
-            valA = a.status.toLowerCase(); valB = b.status.toLowerCase();
-            break;
-          default:
-            return 0;
-        }
-
-        if (valA < valB) return projectSortConfig.direction === 'ascending' ? -1 : 1;
-        if (valA > valB) return projectSortConfig.direction === 'ascending' ? 1 : -1;
-        return 0;
+  
+  // Student Issues data processing
+  const studentIssues = useMemo(() => {
+      const issuesByStudent = new Map<string, { componentName: string; quantity: number; issuedDate: string; componentId: string; issueId: string; }[]>();
+      components.forEach(component => {
+        (component.issuedTo || []).forEach(issue => {
+          const studentName = issue.studentName.trim();
+          if (!issuesByStudent.has(studentName)) {
+            issuesByStudent.set(studentName, []);
+          }
+          issuesByStudent.get(studentName)!.push({
+            componentName: component.name,
+            quantity: issue.quantity,
+            issuedDate: issue.issuedDate,
+            componentId: component.id,
+            issueId: issue.id,
+          });
+        });
       });
-    }
-    return filtered;
-  }, [projects, projectSearchQuery, projectStatusFilter, projectSortConfig]);
+      return issuesByStudent;
+  }, [components]);
+  
+  const filteredStudents = useMemo(() => {
+    return Array.from(studentIssues.keys())
+      .filter(name => typeof name === 'string' && name.toLowerCase().includes(studentSearchQuery.toLowerCase()))
+      .sort();
+  }, [studentIssues, studentSearchQuery]);
 
-  const handleSelectAllProjects = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      setSelectedProjectIds(new Set(filteredAndSortedProjects.map(p => p.id)));
-    } else {
-      setSelectedProjectIds(new Set());
-    }
-  };
+  // Access Log filtering
+  const filteredAccessLog = useMemo(() => {
+    if (!logSearchQuery) return accessLog;
+    const query = logSearchQuery.toLowerCase();
+    return accessLog.filter(log =>
+        log.userAgent.toLowerCase().includes(query) ||
+        parseUserAgent(log.userAgent).toLowerCase().includes(query)
+    );
+  }, [accessLog, logSearchQuery]);
 
-  const handleSelectProject = (id: string, isChecked: boolean) => {
-    setSelectedProjectIds(prev => {
-      const newSelection = new Set(prev);
-      if (isChecked) {
-        newSelection.add(id);
-      } else {
-        newSelection.delete(id);
-      }
-      return newSelection;
-    });
-  };
-
-  // Removed password change logic:
-  // const handleChangePassword = (role: 'admin' | 'user') => {
-  //   setPasswordChangeError(null);
-  //   const currentStoredPass = role === 'admin' ? localStorageService.getAdminPassword() : localStorageService.getUserPassword();
-  //   const newPass = role === 'admin' ? adminPassword : userPassword;
-  //   const currentInputPass = role === 'admin' ? currentAdminPassword : currentUserPassword;
-
-  //   if (!newPass.trim()) {
-  //     setPasswordChangeError('New password cannot be empty.');
-  //     return;
-  //   }
-  //   if (currentInputPass !== currentStoredPass) {
-  //     setPasswordChangeError('Current password is incorrect.');
-  //     return;
-  //   }
-
-  //   if (role === 'admin') {
-  //     localStorageService.setAdminPassword(newPass);
-  //   } else {
-  //     localStorageService.setUserPassword(newPass);
-  //   }
-  //   alert(`${role.charAt(0).toUpperCase() + role.slice(1)} password updated successfully!`);
-  //   setPasswordChangeError(null);
-  //   setCurrentAdminPassword('');
-  //   setCurrentUserPassword('');
-  // };
 
   return (
     <>
@@ -460,12 +458,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         </header>
         <main className="container mx-auto p-4 md:p-8 flex-grow">
-          <div className="flex-shrink-0 flex justify-center mb-6 border-b border-slate-700/50">
-            {['analytics', 'inventory', 'projects', 'image-library', 'settings'].map(tab => (
+          <div className="flex-shrink-0 flex justify-center mb-6 border-b border-slate-700/50 overflow-x-auto">
+            {(['analytics', 'inventory', 'student-issues', 'image-library', 'access-log', 'settings'] as AdminTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as AdminTab)}
-                className={`py-3 px-4 text-base font-semibold transition-colors duration-300 rounded-t-lg ${activeTab === tab ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-white'}`}
+                className={`py-3 px-4 text-sm sm:text-base font-semibold transition-colors duration-300 rounded-t-lg whitespace-nowrap ${activeTab === tab ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-white'}`}
               >
                 {tab.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
               </button>
@@ -497,11 +495,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                         <DatabaseIcon />
                         <h3 className="text-sm font-bold text-slate-400 uppercase">Total Components</h3>
                         <p className="text-3xl font-bold">{components.length}</p>
-                    </div>
-                    <div className="bg-slate-700/50 p-4 rounded-lg flex flex-col items-center justify-center gap-2">
-                        <ProjectIcon className="h-5 w-5" />
-                        <h3 className="text-sm font-bold text-slate-400 uppercase">Total Projects</h3>
-                        <p className="text-3xl font-bold">{projects.length}</p>
                     </div>
                     <div className="bg-slate-700/50 p-4 rounded-lg flex flex-col items-center justify-center gap-2">
                         <LinkIcon />
@@ -733,142 +726,77 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               </div>
             )}
-
-            {activeTab === 'projects' && (
-              <div className="space-y-6">
-                 <h2 className="text-xl font-bold text-sky-400 mb-4">Manage Projects</h2>
-                 {/* Project Filter Bar */}
-                <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between p-4 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-lg">
-                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto flex-grow">
-                      <div className="relative flex-grow">
-                          <input
-                              type="text"
-                              placeholder="Search by project name or team..."
-                              value={projectSearchQuery}
-                              onChange={e => setProjectSearchQuery(e.target.value)}
-                              className="w-full bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              aria-label="Search projects"
-                          />
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <SearchIcon />
-                          </div>
-                      </div>
-                      <select
-                          value={projectStatusFilter}
-                          onChange={e => setProjectStatusFilter(e.target.value as ProjectStatus | 'all')}
-                          className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          aria-label="Filter by status"
-                      >
-                          <option value="all">All Statuses</option>
-                          {Object.values(ProjectStatus).map(status => (
-                              <option key={status} value={status}>{status}</option>
-                          ))}
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end">
-                        <select
-                            value={projectSortConfig.key}
-                            onChange={e => setProjectSortConfig({ ...projectSortConfig, key: e.target.value as any })}
-                            className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            aria-label="Sort by"
-                        >
-                            <option value="default">Default Sort</option>
-                            <option value="name">Name</option>
-                            <option value="team">Team Name</option>
-                            <option value="date">Project Date</option>
-                            <option value="status">Status</option>
-                        </select>
-                        <button
-                            onClick={() => setProjectSortConfig({ ...projectSortConfig, direction: projectSortConfig.direction === 'ascending' ? 'descending' : 'ascending' })}
-                            disabled={projectSortConfig.key === 'default'}
-                            className="p-2 bg-slate-800 border border-slate-700 rounded-md shadow-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-                            aria-label={`Sort ${projectSortConfig.direction === 'ascending' ? 'descending' : 'ascending'}`}
-                        >
-                            {projectSortConfig.direction === 'ascending' ? <ArrowUpIcon /> : <ArrowDownIcon />}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Bulk Project Actions */}
-                <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-lg">
-                  <span className="text-slate-300 font-semibold">Bulk Actions ({selectedProjectIds.size} selected):</span>
-                  <button
-                    onClick={() => executeBulkAction('delete-selected-projects')}
-                    disabled={selectedProjectIds.size === 0}
-                    className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition disabled:opacity-50"
-                  >
-                    <TrashIcon className="inline-block h-4 w-4 mr-1" /> Delete Selected
-                  </button>
-                  <button
-                    onClick={onOpenProjectModal} // Directly opens add project modal
-                    className="py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition"
-                  >
-                    <PlusIcon className="inline-block h-4 w-4 mr-1" /> Add New Project
-                  </button>
-                </div>
-
-                {/* Projects Table */}
-                <div className="bg-slate-800/70 border border-slate-700 rounded-lg overflow-x-auto custom-scrollbar">
-                  <table className="w-full text-left table-auto">
-                    <thead className="sticky top-0 bg-slate-700/90 border-b border-slate-600">
-                      <tr>
-                        <th className="p-3 w-10">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded bg-slate-600 border-slate-500 text-indigo-500 focus:ring-indigo-600"
-                            onChange={handleSelectAllProjects}
-                            checked={selectedProjectIds.size === filteredAndSortedProjects.length && filteredAndSortedProjects.length > 0}
-                            aria-label="Select all projects"
-                          />
-                        </th>
-                        <th className="p-3">Name</th>
-                        <th className="p-3">Team</th>
-                        <th className="p-3">Date</th>
-                        <th className="p-3 text-center">Status</th>
-                        <th className="p-3 text-center w-36">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredAndSortedProjects.length > 0 ? (
-                        filteredAndSortedProjects.map(project => (
-                          <tr key={project.id} className="border-b border-slate-700 last:border-0 hover:bg-slate-700/50">
-                            <td className="p-3">
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded bg-slate-600 border-slate-500 text-indigo-500 focus:ring-indigo-600"
-                                checked={selectedProjectIds.has(project.id)}
-                                onChange={e => handleSelectProject(project.id, e.target.checked)}
-                                aria-label={`Select ${project.name}`}
-                              />
-                            </td>
-                            <td className="p-3 font-medium text-white">{project.name}</td>
-                            <td className="p-3 text-slate-300">{project.teamName}</td>
-                            <td className="p-3 text-slate-300">{new Date(project.projectDate).toLocaleDateString()}</td>
-                            <td className="p-3 text-center">
-                                <span className={`text-xs font-bold px-2 py-1 rounded-full border 
-                                    ${project.status === ProjectStatus.IN_PROGRESS ? "bg-sky-500/30 text-sky-300 border-sky-500/50" : ""}
-                                    ${project.status === ProjectStatus.COMPLETED ? "bg-green-500/30 text-green-300 border-green-500/50" : ""}
-                                    ${project.status === ProjectStatus.ON_HOLD ? "bg-yellow-500/30 text-yellow-300 border-yellow-500/50" : ""}
-                                `}>
-                                    {project.status}
-                                </span>
-                            </td>
-                            <td className="p-3 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <button onClick={() => onOpenEditProjectModal(project)} className="p-2 bg-slate-600 hover:bg-sky-600 rounded-md text-white" title="Edit Project"><EditIcon /></button>
-                                <button onClick={() => onDeleteProject(project.id)} className="p-2 bg-red-600 hover:bg-red-700 rounded-md text-white" title="Delete Project"><TrashIcon /></button>
-                              </div>
-                            </td>
+            
+            {activeTab === 'student-issues' && (
+              <div className="bg-slate-800/70 p-6 rounded-lg border border-slate-700">
+                {selectedStudent ? (
+                  <div>
+                    <button onClick={() => setSelectedStudent(null)} className="flex items-center gap-2 text-sm text-sky-400 hover:text-sky-300 mb-4">
+                        <ArrowLeftIcon /> Back to Student List
+                    </button>
+                    <h3 className="text-xl font-bold text-sky-400 mb-4">Items Issued to: <span className="text-white">{selectedStudent}</span></h3>
+                    <div className="overflow-x-auto custom-scrollbar">
+                      <table className="w-full text-left table-auto">
+                        <thead className="bg-slate-700/90 border-b border-slate-600">
+                          <tr>
+                            <th className="p-3">Component Name</th>
+                            <th className="p-3 text-center">Quantity</th>
+                            <th className="p-3">Issued Date</th>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={6} className="p-4 text-center text-slate-500">No projects match your criteria.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                        </thead>
+                        <tbody>
+                          {studentIssues.get(selectedStudent)?.map(issue => (
+                            <tr key={issue.issueId} className="border-b border-slate-700 last:border-0">
+                              <td className="p-3 font-medium text-white">{issue.componentName}</td>
+                              <td className="p-3 text-center text-slate-300">{issue.quantity}</td>
+                              <td className="p-3 text-slate-400">{new Date(issue.issuedDate).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <h2 className="text-xl font-bold text-sky-400 mb-4">Student Issue Tracker</h2>
+                     <div className="relative mb-4">
+                        <input
+                            type="text"
+                            placeholder="Search by student name..."
+                            value={studentSearchQuery}
+                            onChange={e => setStudentSearchQuery(e.target.value)}
+                            className="w-full bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            aria-label="Search students"
+                        />
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <SearchIcon />
+                        </div>
+                    </div>
+                    {filteredStudents.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredStudents.map(studentName => (
+                          <button 
+                            key={studentName} 
+                            onClick={() => setSelectedStudent(studentName)}
+                            className="p-4 bg-slate-900/50 border border-slate-700 rounded-lg text-left hover:bg-slate-700/50 hover:border-sky-500/50 transition"
+                          >
+                            <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
+                                   <UserIcon className="h-6 w-6 text-slate-400" />
+                               </div>
+                               <div>
+                                  <h4 className="font-semibold text-white truncate">{studentName}</h4>
+                                  <p className="text-xs text-slate-400">{studentIssues.get(studentName)?.length} item(s) issued</p>
+                               </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-slate-500 italic py-8">No students have issued components, or none match your search.</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -931,51 +859,68 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
             )}
 
+            {activeTab === 'access-log' && (
+                <div className="bg-slate-800/70 p-6 rounded-lg border border-slate-700">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div>
+                           <h2 className="text-xl font-bold text-sky-400">Access Log</h2>
+                           <p className="text-sm text-slate-400">Shows the last 1000 times the app was opened.</p>
+                        </div>
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                             <div className="relative flex-grow sm:flex-grow-0">
+                                <input
+                                    type="text"
+                                    placeholder="Search devices..."
+                                    value={logSearchQuery}
+                                    onChange={e => setLogSearchQuery(e.target.value)}
+                                    className="w-full bg-slate-800 border-slate-700 rounded-md py-2 px-3 pl-9 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <SearchIcon />
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => executeBulkAction('clear-access-log')}
+                                className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition"
+                                title="Clear Access Log"
+                            >
+                                <TrashIcon />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                        {filteredAccessLog.length > 0 ? (
+                            <ul className="space-y-2">
+                                {filteredAccessLog.map(log => (
+                                    <li key={log.id} className="p-3 bg-slate-900/50 rounded-md border border-slate-700/50 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center flex-shrink-0 text-indigo-400">
+                                                <ClipboardListIcon />
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-white">{parseUserAgent(log.userAgent)}</p>
+                                                <p className="text-xs text-slate-500 font-mono" title={log.userAgent}>{log.userAgent}</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-slate-400 text-right flex-shrink-0">
+                                            {new Date(log.timestamp).toLocaleString()}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-center text-slate-500 italic py-8">No access log entries found, or none match your search.</p>
+                        )}
+                    </div>
+                </div>
+            )}
+
+
             {activeTab === 'settings' && (
                 <div className="space-y-8">
                     <h2 className="text-xl font-bold text-sky-400 mb-4">Application Settings</h2>
                     
-                    {/* Removed Password Management Section
-                    <div className="bg-slate-800/70 p-6 rounded-lg border border-slate-700">
-                        <h3 className="text-xl font-bold text-sky-400 mb-4">Password Management</h3>
-                        {passwordChangeError && <p className="text-red-400 bg-red-900/30 p-3 rounded-md mb-4">{passwordChangeError}</p>}
-                        
-                        <div className="space-y-6">
-                            {/* Admin Password 
-                            <div>
-                                <h4 className="text-lg font-semibold text-slate-300 mb-2">Change Admin Password</h4>
-                                <div className="space-y-2">
-                                    <div>
-                                        <label htmlFor="currentAdminPass" className="block text-sm font-medium text-slate-400">Current Admin Password</label>
-                                        <input type="password" id="currentAdminPass" value={currentAdminPassword} onChange={e => setCurrentAdminPassword(e.target.value)} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md py-2 px-3 text-white" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="newAdminPass" className="block text-sm font-medium text-slate-400">New Admin Password</label>
-                                        <input type="password" id="newAdminPass" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md py-2 px-3 text-white" />
-                                    </div>
-                                    <button onClick={() => handleChangePassword('admin')} className="py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition">Update Admin Password</button>
-                                </div>
-                            </div>
-
-                            {/* User Password 
-                            <div>
-                                <h4 className="text-lg font-semibold text-slate-300 mb-2">Change User Password</h4>
-                                <div className="space-y-2">
-                                    <div>
-                                        <label htmlFor="currentUserPass" className="block text-sm font-medium text-slate-400">Current User Password</label>
-                                        <input type="password" id="currentUserPass" value={currentUserPassword} onChange={e => setCurrentUserPassword(e.target.value)} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md py-2 px-3 text-white" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="newUserPass" className="block text-sm font-medium text-slate-400">New User Password</label>
-                                        <input type="password" id="newUserPass" value={userPassword} onChange={e => setUserPassword(e.target.value)} className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md py-2 px-3 text-white" />
-                                    </div>
-                                    <button onClick={() => handleChangePassword('user')} className="py-2 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg transition">Update User Password</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    */}
-
                     <div className="bg-slate-800/70 p-6 rounded-lg border border-slate-700">
                         <h3 className="text-xl font-bold text-sky-400 mb-4">Data Management</h3>
                         <div className="flex flex-col sm:flex-row gap-4">
@@ -1014,13 +959,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             confirmAction.type === 'set-maintenance-status' && confirmAction.payload === true ? `Are you sure you want to set ${selectedComponentIds.size} components to 'Under Maintenance'?` :
             confirmAction.type === 'set-maintenance-status' && confirmAction.payload === false ? `Are you sure you want to set ${selectedComponentIds.size} components to 'Available'?` :
             confirmAction.type === 'change-category' ? `Are you sure you want to change the category of ${selectedComponentIds.size} components to "${confirmAction.payload}"?` :
-            confirmAction.type === 'clear-all-data' ? `WARNING: This will delete ALL data (components, projects, images, analytics, and passwords). This action cannot be undone. Are you absolutely sure?` :
-            confirmAction.type === 'delete-selected-projects' ? `Are you sure you want to delete ${selectedProjectIds.size} selected projects? This cannot be undone.` :
+            confirmAction.type === 'clear-all-data' ? `WARNING: This will delete ALL data (components, images, analytics, and passwords). This action cannot be undone. Are you absolutely sure?` :
+            confirmAction.type === 'clear-access-log' ? `Are you sure you want to clear the entire access log? This cannot be undone.` :
             "Are you sure you want to perform this action?"
           }
           onConfirm={handleConfirmAction}
           onCancel={handleCancelAction}
-          confirmButtonClass={confirmAction.type === 'clear-all-data' || confirmAction.type.startsWith('delete') ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}
+          confirmButtonClass={confirmAction.type === 'clear-all-data' || confirmAction.type.startsWith('delete') || confirmAction.type === 'clear-access-log' ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}
         />
       )}
 
@@ -1029,9 +974,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           onClose={() => setIsImportExportModalOpen(false)}
           components={components}
           setComponents={setComponents}
-          projects={projects}
-          setProjects={setProjects}
-          // FIX: Pass the correct setter function for customImageLibrary
+          projects={[]}
+          setProjects={() => {}}
           setCustomImageLibrary={setCustomLibrary}
           setAnalyticsData={setAnalyticsData}
           onLibraryUpdate={onLibraryUpdate}
