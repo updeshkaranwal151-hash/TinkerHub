@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Project, Component, ProjectStatus, ProjectTask } from '../types.ts';
 import ProjectDashboard from './ProjectDashboard.tsx';
 import ProjectModal from './ProjectModal.tsx';
@@ -24,27 +24,26 @@ const ProjectHub: React.FC<ProjectHubProps> = ({ projects, inventoryComponents, 
       project.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [projects, searchQuery]);
+  
+  useEffect(() => {
+    const currentProjectIsVisible = filteredProjects.some(p => p.id === selectedProjectId);
 
-  const selectedProject = useMemo(() => {
-    const findProject = (id: string | null) => projects.find(p => p.id === id);
-    let project = findProject(selectedProjectId);
-
-    if (!project && filteredProjects.length > 0) {
-      project = filteredProjects[0];
-      if (project) {
-        setSelectedProjectId(project.id);
+    // This logic ensures that if the selected project is filtered out, or if no project is selected,
+    // it will automatically select the first available project from the filtered list.
+    if (!currentProjectIsVisible) {
+      if (filteredProjects.length > 0) {
+        setSelectedProjectId(filteredProjects[0].id);
+      } else {
+        setSelectedProjectId(null);
       }
     }
-    
-    if (selectedProjectId && !filteredProjects.some(p => p.id === selectedProjectId)) {
-        setSelectedProjectId(null);
-        project = filteredProjects.length > 0 ? filteredProjects[0] : undefined;
-        if(project) setSelectedProjectId(project.id);
-    }
+  }, [filteredProjects, selectedProjectId, projects]);
 
-    return project;
-  }, [projects, selectedProjectId, filteredProjects]);
-  
+  const selectedProject = useMemo(() => {
+    if (!selectedProjectId) return null;
+    return projects.find(p => p.id === selectedProjectId);
+  }, [projects, selectedProjectId]);
+
   const handleSaveProject = (projectData: NewProjectData) => {
       onAddProject(projectData);
       setIsModalOpen(false);
