@@ -129,6 +129,16 @@ const App: React.FC = () => {
         setImageLibrary(getMergedImageLibrary()); // Reset to default + custom only
     }
   }, [isAuthenticated]); // Only re-run when authentication status changes
+  
+  const handleUserLogin = (view: 'inventory' | 'projects') => {
+      setIsAuthenticated(true);
+      setCurrentView(view);
+  };
+  
+  const handleGoBack = () => {
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+  };
 
   const handleOpenScanner = () => {
       setIsScannerModalOpen(true);
@@ -353,7 +363,7 @@ const App: React.FC = () => {
 
   if (!isAuthenticated) {
     return <PasswordProtection 
-        onSuccess={() => setIsAuthenticated(true)}
+        onUserLogin={handleUserLogin}
         onAdminSuccess={() => { setIsAuthenticated(true); setIsAdmin(true); }}
     />;
   }
@@ -362,7 +372,7 @@ const App: React.FC = () => {
   if (isAdmin) {
     return (
       <AdminPanel 
-          onExit={() => setIsAdmin(false)} 
+          onExit={handleGoBack}
           onLibraryUpdate={() => setImageLibrary(getMergedImageLibrary())}
           components={components}
           setComponents={setComponents}
@@ -381,6 +391,8 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen font-sans flex flex-col`}>
       <Header 
+        onGoBack={handleGoBack}
+        currentView={currentView}
         onAddComponent={() => setIsAddModalOpen(true)}
         onOpenScanner={handleOpenScanner}
         onClearAll={handleClearAllComponents}
@@ -389,8 +401,6 @@ const App: React.FC = () => {
         onExport={handleExportCSV}
         isLightMode={isLightMode}
         onToggleLightMode={() => setIsLightMode(prev => !prev)}
-        currentView={currentView}
-        onSetView={setCurrentView}
       />
       
       {currentView === 'inventory' ? (

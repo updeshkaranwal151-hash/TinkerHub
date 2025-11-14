@@ -1,14 +1,13 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
-import * as localStorageService from '../services/localStorageService.ts';
+import React, { useState, useMemo } from 'react';
 import { Logo } from './Logo.tsx';
+import { DatabaseIcon, ProjectIcon, ArrowLeftIcon } from './Icons.tsx';
 
 interface PasswordProtectionProps {
-  onSuccess: () => void;
+  onUserLogin: (view: 'inventory' | 'projects') => void;
   onAdminSuccess: () => void;
 }
 
-const AnimatedBackground: React.FC = () => {
+export const AnimatedBackground: React.FC = () => {
     const icons = useMemo(() => ['#', '$', '_', '&', '@', '{', '}', '<', '>', '%', '*'], []);
     const colors = useMemo(() => ['#38bdf8', '#818cf8', '#f471b5', '#fbbf24', '#34d399', '#a78bfa', '#f87171'], []);
 
@@ -21,6 +20,7 @@ const AnimatedBackground: React.FC = () => {
             animationDelay: `-${Math.random() * 25}s`, // start at random points in the animation
             fontSize: `${Math.random() * 24 + 16}px`, // 16px to 40px
             color: colors[Math.floor(Math.random() * colors.length)],
+            textShadow: `0 0 8px ${colors[Math.floor(Math.random() * colors.length)]}66`,
         }));
     }, [icons, colors]);
 
@@ -36,7 +36,7 @@ const AnimatedBackground: React.FC = () => {
                         animationDelay: icon.animationDelay,
                         fontSize: icon.fontSize,
                         color: icon.color,
-                        textShadow: `0 0 8px ${icon.color}66`, // Add a subtle glow
+                        textShadow: icon.textShadow,
                     }}
                 >
                     {icon.char}
@@ -47,19 +47,69 @@ const AnimatedBackground: React.FC = () => {
 };
 
 
-const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onSuccess, onAdminSuccess }) => {
-  // Since App.tsx ensures default passwords are set, we can directly present the choice.
-  // The original password input and validation are no longer needed here for login.
+const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onUserLogin, onAdminSuccess }) => {
+  const [step, setStep] = useState<'role' | 'hub'>('role');
 
-  const handleUserLogin = () => {
-    localStorageService.trackSuccessfulLogin();
-    onSuccess();
-  };
+  const RoleSelection = () => (
+    <>
+      <h2 className="text-xl font-bold mb-6 text-center text-slate-200">
+          Select Panel
+      </h2>
+      <div className="space-y-4">
+          <button
+              onClick={() => setStep('hub')}
+              className="w-full flex items-center justify-center py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-lg shadow-sky-600/30 transition-all duration-300 transform hover:scale-105"
+          >
+              User Panel
+          </button>
+          <button
+              onClick={onAdminSuccess}
+              className="w-full flex items-center justify-center py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-600/30 transition-all duration-300 transform hover:scale-105"
+          >
+              Admin Panel
+          </button>
+      </div>
+    </>
+  );
 
-  const handleAdminLogin = () => {
-    localStorageService.trackSuccessfulLogin();
-    onAdminSuccess();
-  };
+  const HubSelection = () => (
+    <>
+      <div className="flex items-center mb-6 relative">
+        <button onClick={() => setStep('role')} className="p-2 -ml-2 mr-2 rounded-full hover:bg-slate-700/50 absolute left-0">
+          <ArrowLeftIcon />
+        </button>
+        <h2 className="text-xl font-bold text-center text-slate-200 flex-grow">
+            Choose Your Hub
+        </h2>
+      </div>
+      <div className="space-y-4">
+        <button
+          onClick={() => onUserLogin('inventory')}
+          className="w-full text-left p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-all duration-300 transform hover:scale-105 border border-slate-600 hover:border-sky-500"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-sky-600/30 text-sky-400 rounded-lg"><DatabaseIcon className="h-6 w-6"/></div>
+            <div>
+              <h3 className="font-bold text-lg text-white">Inventory Manager</h3>
+              <p className="text-sm text-slate-400">Track and manage lab components.</p>
+            </div>
+          </div>
+        </button>
+        <button
+          onClick={() => onUserLogin('projects')}
+          className="w-full text-left p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-all duration-300 transform hover:scale-105 border border-slate-600 hover:border-indigo-500"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-indigo-600/30 text-indigo-400 rounded-lg"><ProjectIcon className="h-6 w-6"/></div>
+            <div>
+              <h3 className="font-bold text-lg text-white">Project Hub</h3>
+              <p className="text-sm text-slate-400">Organize and showcase student projects.</p>
+            </div>
+          </div>
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <div className="relative min-h-screen bg-slate-900 flex flex-col z-50 p-4 overflow-hidden">
@@ -74,24 +124,7 @@ const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onSuccess, onAd
                 <p className="text-lg text-slate-400 mt-2">The ATL Lab Inventory Manager</p>
             </div>
             <div className="password-protection-card bg-slate-800/80 backdrop-blur-sm rounded-lg shadow-xl p-6 md:p-8 w-full max-w-sm z-10 border border-slate-700">
-                <h2 className="text-xl font-bold mb-6 text-center text-slate-200">
-                    Select Panel
-                </h2>
-                
-                <div className="space-y-4">
-                   <button
-                        onClick={handleUserLogin}
-                        className="w-full flex items-center justify-center py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-lg shadow-sky-600/30 transition-all duration-300 transform hover:scale-105"
-                    >
-                        User Panel
-                    </button>
-                    <button
-                        onClick={handleAdminLogin}
-                        className="w-full flex items-center justify-center py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-600/30 transition-all duration-300 transform hover:scale-105"
-                    >
-                        Admin Panel
-                    </button>
-                </div>
+                {step === 'role' ? <RoleSelection /> : <HubSelection />}
             </div>
         </main>
         <footer className="w-full text-center text-slate-500 text-sm py-4 z-10">
