@@ -391,8 +391,8 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen font-sans flex flex-col`}>
       <Header 
-        onGoBack={handleGoBack}
         currentView={currentView}
+        onSetView={setCurrentView}
         onAddComponent={() => setIsAddModalOpen(true)}
         onOpenScanner={handleOpenScanner}
         onClearAll={handleClearAllComponents}

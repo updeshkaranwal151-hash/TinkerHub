@@ -48,7 +48,6 @@ export const AnimatedBackground: React.FC = () => {
 
 
 const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onUserLogin, onAdminSuccess }) => {
-  const [step, setStep] = useState<'role' | 'hub'>('role');
 
   const RoleSelection = () => (
     <>
@@ -57,7 +56,7 @@ const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onUserLogin, on
       </h2>
       <div className="space-y-4">
           <button
-              onClick={() => setStep('hub')}
+              onClick={() => onUserLogin('inventory')}
               className="w-full flex items-center justify-center py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-lg shadow-sky-600/30 transition-all duration-300 transform hover:scale-105"
           >
               User Panel
@@ -68,45 +67,6 @@ const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onUserLogin, on
           >
               Admin Panel
           </button>
-      </div>
-    </>
-  );
-
-  const HubSelection = () => (
-    <>
-      <div className="flex items-center mb-6 relative">
-        <button onClick={() => setStep('role')} className="p-2 -ml-2 mr-2 rounded-full hover:bg-slate-700/50 absolute left-0">
-          <ArrowLeftIcon />
-        </button>
-        <h2 className="text-xl font-bold text-center text-slate-200 flex-grow">
-            Choose Your Hub
-        </h2>
-      </div>
-      <div className="space-y-4">
-        <button
-          onClick={() => onUserLogin('inventory')}
-          className="w-full text-left p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-all duration-300 transform hover:scale-105 border border-slate-600 hover:border-sky-500"
-        >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-sky-600/30 text-sky-400 rounded-lg"><DatabaseIcon className="h-6 w-6"/></div>
-            <div>
-              <h3 className="font-bold text-lg text-white">Inventory Manager</h3>
-              <p className="text-sm text-slate-400">Track and manage lab components.</p>
-            </div>
-          </div>
-        </button>
-        <button
-          onClick={() => onUserLogin('projects')}
-          className="w-full text-left p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-all duration-300 transform hover:scale-105 border border-slate-600 hover:border-indigo-500"
-        >
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-indigo-600/30 text-indigo-400 rounded-lg"><ProjectIcon className="h-6 w-6"/></div>
-            <div>
-              <h3 className="font-bold text-lg text-white">Project Hub</h3>
-              <p className="text-sm text-slate-400">Organize and showcase student projects.</p>
-            </div>
-          </div>
-        </button>
       </div>
     </>
   );
@@ -124,7 +84,7 @@ const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onUserLogin, on
                 <p className="text-lg text-slate-400 mt-2">The ATL Lab Inventory Manager</p>
             </div>
             <div className="password-protection-card bg-slate-800/80 backdrop-blur-sm rounded-lg shadow-xl p-6 md:p-8 w-full max-w-sm z-10 border border-slate-700">
-                {step === 'role' ? <RoleSelection /> : <HubSelection />}
+                <RoleSelection />
             </div>
         </main>
         <footer className="w-full text-center text-slate-500 text-sm py-4 z-10">
