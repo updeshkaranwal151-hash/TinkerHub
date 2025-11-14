@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PlusIcon, TrashIcon, ShareIcon, ImportIcon, ExportIcon, SunIcon, MoonIcon, MoreIcon, ScanIcon, DatabaseIcon, ProjectIcon } from './Icons.tsx';
+import { PlusIcon, TrashIcon, ShareIcon, ImportIcon, ExportIcon, SunIcon, MoonIcon, MoreIcon, ScanIcon } from './Icons.tsx';
 import { Logo } from './Logo.tsx';
 
 interface HeaderProps {
@@ -11,32 +11,11 @@ interface HeaderProps {
     onExport: () => void;
     isLightMode: boolean;
     onToggleLightMode: () => void;
-    currentView: 'inventory' | 'projects';
-    onSetView: (view: 'inventory' | 'projects') => void;
 }
-
-const ViewSwitcher: React.FC<{ currentView: 'inventory' | 'projects'; onSetView: (view: 'inventory' | 'projects') => void; }> = ({ currentView, onSetView }) => (
-    <div className="hidden md:flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
-        <button
-            onClick={() => onSetView('inventory')}
-            className={`flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-md transition-colors ${currentView === 'inventory' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700'}`}
-        >
-            <DatabaseIcon className="h-4 w-4" /> Inventory
-        </button>
-        <button
-            onClick={() => onSetView('projects')}
-            className={`flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-md transition-colors ${currentView === 'projects' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700'}`}
-        >
-            <ProjectIcon className="h-4 w-4" /> Project Hub
-        </button>
-    </div>
-);
-
 
 const Header: React.FC<HeaderProps> = ({ 
     onAddComponent, onClearAll, onOpenShareModal, 
-    onOpenImportModal, onExport, isLightMode, onToggleLightMode, onOpenScanner,
-    currentView, onSetView
+    onOpenImportModal, onExport, isLightMode, onToggleLightMode, onOpenScanner
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -85,28 +64,23 @@ const Header: React.FC<HeaderProps> = ({
             >
                 {isLightMode ? <MoonIcon /> : <SunIcon />}
             </button>
-            <ViewSwitcher currentView={currentView} onSetView={onSetView} />
-
-            {currentView === 'inventory' && (
-              <>
-                <button
-                    onClick={onOpenScanner}
-                    className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition duration-300 shadow-lg shadow-sky-600/30"
-                    title="Scan Component with AI"
-                >
-                    <ScanIcon />
-                    <span className="hidden sm:inline">Scan</span>
-                </button>
-                <button
-                  onClick={onAddComponent}
-                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition duration-300 shadow-lg shadow-indigo-600/30"
-                >
-                  <PlusIcon />
-                  <span className="hidden sm:inline">Add</span>
-                  <span className="hidden lg:inline"> Component</span>
-                </button>
-              </>
-            )}
+            
+            <button
+                onClick={onOpenScanner}
+                className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition duration-300 shadow-lg shadow-sky-600/30"
+                title="Scan Component with AI"
+            >
+                <ScanIcon />
+                <span className="hidden sm:inline">Scan</span>
+            </button>
+            <button
+              onClick={onAddComponent}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition duration-300 shadow-lg shadow-indigo-600/30"
+            >
+              <PlusIcon />
+              <span className="hidden sm:inline">Add</span>
+              <span className="hidden lg:inline"> Component</span>
+            </button>
           
           {/* Desktop Buttons */}
           <div className="hidden md:flex items-center gap-2">
@@ -152,13 +126,6 @@ const Header: React.FC<HeaderProps> = ({
               {isMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-30">
                       <div className="py-1">
-                          <MenuButton onClick={() => { onSetView('inventory'); setIsMenuOpen(false); }}>
-                              <DatabaseIcon className="h-4 w-4" /> Inventory
-                          </MenuButton>
-                          <MenuButton onClick={() => { onSetView('projects'); setIsMenuOpen(false); }}>
-                              <ProjectIcon className="h-4 w-4" /> Project Hub
-                          </MenuButton>
-                          <div className="my-1 border-t border-slate-700" />
                           <MenuButton onClick={() => { onOpenShareModal(); setIsMenuOpen(false); }}>
                               <ShareIcon /> Share App
                           </MenuButton>

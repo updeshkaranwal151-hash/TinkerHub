@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Component, Project, Category } from '../types.ts';
+import { Component, Category } from '../types.ts';
 import { ImageData } from './imageLibrary.ts';
 import * as localStorageService from '../services/localStorageService.ts';
 import { ImportIcon, ExportIcon } from './Icons.tsx';
@@ -9,8 +8,6 @@ interface AdminImportExportModalProps {
   onClose: () => void;
   components: Component[];
   setComponents: React.Dispatch<React.SetStateAction<Component[]>>;
-  projects: Project[];
-  setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   setCustomImageLibrary: React.Dispatch<React.SetStateAction<Record<string, ImageData[]>>>;
   setAnalyticsData: React.Dispatch<React.SetStateAction<any>>; // AnalyticsData type
   onLibraryUpdate: () => void;
@@ -18,7 +15,6 @@ interface AdminImportExportModalProps {
 
 interface AllAppData {
     components: Component[];
-    projects: Project[];
     imageLibrary: Record<string, ImageData[]>;
     analytics: any; // AnalyticsData type
     adminPassword: string | null;
@@ -29,8 +25,6 @@ const AdminImportExportModal: React.FC<AdminImportExportModalProps> = ({
   onClose,
   components,
   setComponents,
-  projects,
-  setProjects,
   setCustomImageLibrary,
   setAnalyticsData,
   onLibraryUpdate,
@@ -88,7 +82,7 @@ const AdminImportExportModal: React.FC<AdminImportExportModalProps> = ({
         const importedData: AllAppData = JSON.parse(text);
 
         // Basic validation for critical keys
-        if (!importedData.components || !importedData.projects || !importedData.imageLibrary || !importedData.analytics) {
+        if (!importedData.components || !importedData.imageLibrary || !importedData.analytics) {
             throw new Error("Invalid backup file structure. Missing core data.");
         }
 
@@ -102,7 +96,6 @@ const AdminImportExportModal: React.FC<AdminImportExportModalProps> = ({
 
         // Update React states in App.tsx via props
         setComponents(importedData.components);
-        setProjects(importedData.projects);
         setCustomImageLibrary(importedData.imageLibrary);
         setAnalyticsData(importedData.analytics);
         onLibraryUpdate(); // Trigger refresh for image library in App.tsx
@@ -136,7 +129,7 @@ const AdminImportExportModal: React.FC<AdminImportExportModalProps> = ({
         <div className="flex-grow space-y-6">
             <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-600">
                 <h3 className="font-semibold text-slate-200 mb-2">Export Data</h3>
-                <p className="text-sm text-slate-400 mb-4">Download a JSON backup of all your app data (components, projects, images, analytics, and passwords).</p>
+                <p className="text-sm text-slate-400 mb-4">Download a JSON backup of all your app data (components, images, analytics, and passwords).</p>
                 <button
                     onClick={handleExportData}
                     className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"

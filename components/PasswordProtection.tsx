@@ -3,7 +3,7 @@ import { Logo } from './Logo.tsx';
 import { DatabaseIcon, ProjectIcon, ArrowLeftIcon } from './Icons.tsx';
 
 interface PasswordProtectionProps {
-  onUserLogin: (view: 'inventory' | 'projects') => void;
+  onUserLogin: () => void;
   onAdminSuccess: () => void;
 }
 
@@ -56,7 +56,7 @@ const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onUserLogin, on
       </h2>
       <div className="space-y-4">
           <button
-              onClick={() => onUserLogin('inventory')}
+              onClick={onUserLogin}
               className="w-full flex items-center justify-center py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-lg shadow-sky-600/30 transition-all duration-300 transform hover:scale-105"
           >
               User Panel

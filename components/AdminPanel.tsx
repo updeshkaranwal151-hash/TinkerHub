@@ -974,8 +974,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           onClose={() => setIsImportExportModalOpen(false)}
           components={components}
           setComponents={setComponents}
-          projects={[]}
-          setProjects={() => {}}
           setCustomImageLibrary={setCustomLibrary}
           setAnalyticsData={setAnalyticsData}
           onLibraryUpdate={onLibraryUpdate}

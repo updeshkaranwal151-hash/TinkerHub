@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Component, IssueRecord, Category, AISuggestions, Project, ProjectStatus, ProjectTask } from './types.ts';
+import { Component, IssueRecord, Category, AISuggestions } from './types.ts';
 import Header from './components/Header.tsx';
 import ComponentCard from './components/ComponentCard.tsx';
 import AddComponentModal from './components/AddComponentModal.tsx';
@@ -18,7 +18,6 @@ import LandingPage from './components/LandingPage.tsx';
 import SplashScreen from './components/SplashScreen.tsx';
 import SmartScannerModal from './components/SmartScannerModal.tsx';
 import AIComponentScanResultModal from './components/AIComponentScanResultModal.tsx';
-import ProjectHub from './components/ProjectHub.tsx';
 
 
 type SortKey = 'default' | 'name' | 'category' | 'availability';
@@ -53,9 +52,7 @@ const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   
   // App State
-  const [currentView, setCurrentView] = useState<'inventory' | 'projects'>('inventory');
   const [components, setComponents] = useState<Component[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
 
   const [imageLibrary, setImageLibrary] = useState(getMergedImageLibrary());
   const [isLoading, setIsLoading] = useState(true);
@@ -113,9 +110,7 @@ const App: React.FC = () => {
         setIsLoading(true);
         try {
             const componentData = localStorageService.getComponents();
-            const projectData = localStorageService.getProjects();
             setComponents(componentData);
-            setProjects(projectData);
             setImageLibrary(getMergedImageLibrary()); // Ensure image library is up-to-date
         } catch (err) {
             console.error("Error fetching data from local storage:", err);
@@ -125,14 +120,12 @@ const App: React.FC = () => {
     } else {
         // Clear data if not authenticated
         setComponents([]);
-        setProjects([]);
         setImageLibrary(getMergedImageLibrary()); // Reset to default + custom only
     }
   }, [isAuthenticated]); // Only re-run when authentication status changes
   
-  const handleUserLogin = (view: 'inventory' | 'projects') => {
+  const handleUserLogin = () => {
       setIsAuthenticated(true);
-      setCurrentView(view);
   };
   
   const handleGoBack = () => {
@@ -297,25 +290,6 @@ const App: React.FC = () => {
       alert(`${newComponents.length} components were successfully imported!`);
   };
 
-  // Project Handlers
-  const handleAddProject = (projectData: Omit<Project, 'id' | 'createdAt' | 'attachments' | 'requiredComponents'>) => {
-      const newProject = localStorageService.addProject(projectData);
-      setProjects(prev => [newProject, ...prev]);
-  };
-
-  const handleUpdateProject = (updatedProject: Project) => {
-      localStorageService.updateProject(updatedProject);
-      setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
-  };
-
-  const handleDeleteProject = (projectId: string) => {
-      if (window.confirm('Are you sure you want to permanently delete this project? This action cannot be undone.')) {
-          localStorageService.deleteProject(projectId);
-          setProjects(prev => prev.filter(p => p.id !== projectId));
-      }
-  };
-
-
   const filteredComponents = useMemo(() => components.filter(component => {
     const matchesSearch = component.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || component.category === categoryFilter;
@@ -391,8 +365,6 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen font-sans flex flex-col`}>
       <Header 
-        currentView={currentView}
-        onSetView={setCurrentView}
         onAddComponent={() => setIsAddModalOpen(true)}
         onOpenScanner={handleOpenScanner}
         onClearAll={handleClearAllComponents}
@@ -403,130 +375,119 @@ const App: React.FC = () => {
         onToggleLightMode={() => setIsLightMode(prev => !prev)}
       />
       
-      {currentView === 'inventory' ? (
-        <main className="container mx-auto p-4 md:p-8 flex-grow flex flex-col">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-sky-400">Inventory Dashboard</h2>
-          </div>
+      <main className="container mx-auto p-4 md:p-8 flex-grow flex flex-col">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-sky-400">Inventory Dashboard</h2>
+        </div>
 
-          {lowStockComponents.length > 0 && (
-            <div className="mb-6 p-4 bg-yellow-900/50 border border-yellow-700 rounded-lg animate-pulse hover:animate-none">
-              <div className="flex items-center gap-3">
-                <WarningIcon className="text-yellow-400 h-6 w-6 flex-shrink-0" />
-                <div>
-                  <h3 className="font-bold text-yellow-300">Low Stock Alert!</h3>
-                  <p className="text-sm text-yellow-400">
-                    The following components are running low: {lowStockComponents.map(c => `${c.name} (${c.totalQuantity - (c.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0)} left)`).join(', ')}. Consider re-stocking soon.
-                  </p>
-                </div>
+        {lowStockComponents.length > 0 && (
+          <div className="mb-6 p-4 bg-yellow-900/50 border border-yellow-700 rounded-lg animate-pulse hover:animate-none">
+            <div className="flex items-center gap-3">
+              <WarningIcon className="text-yellow-400 h-6 w-6 flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-yellow-300">Low Stock Alert!</h3>
+                <p className="text-sm text-yellow-400">
+                  The following components are running low: {lowStockComponents.map(c => `${c.name} (${c.totalQuantity - (c.issuedTo || []).reduce((sum, issue) => sum + (issue.quantity || 1), 0)} left)`).join(', ')}. Consider re-stocking soon.
+                </p>
               </div>
             </div>
-          )}
-
-          <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between p-4 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-lg">
-              <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto flex-grow">
-                <div className="relative flex-grow">
-                    <input
-                        type="text"
-                        placeholder="Search by component name..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        className="w-full bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        aria-label="Search components"
-                    />
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <SearchIcon />
-                    </div>
-                </div>
-                <select
-                    value={categoryFilter}
-                    onChange={e => setCategoryFilter(e.target.value as Category | 'all')}
-                    className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    aria-label="Filter by category"
-                >
-                    <option value="all">All Categories</option>
-                    {Object.values(Category).map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end">
-                  <select
-                      value={sortConfig.key}
-                      onChange={e => setSortConfig({ ...sortConfig, key: e.target.value as SortKey })}
-                      className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      aria-label="Sort by"
-                  >
-                      <option value="default">Default Sort</option>
-                      <option value="name">Name</option>
-                      <option value="category">Category</option>
-                      <option value="availability">Availability</option>
-                  </select>
-                  <button
-                      onClick={() => setSortConfig({ ...sortConfig, direction: sortConfig.direction === 'ascending' ? 'descending' : 'ascending' })}
-                      disabled={sortConfig.key === 'default'}
-                      className="p-2 bg-slate-800 border border-slate-700 rounded-md shadow-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-                      aria-label={`Sort ${sortConfig.direction === 'ascending' ? 'descending' : 'ascending'}`}
-                  >
-                      {sortConfig.direction === 'ascending' ? <ArrowUpIcon /> : <ArrowDownIcon />}
-                  </button>
-              </div>
           </div>
-          
-          {isLoading ? (
-              <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
-                  <h3 className="text-xl font-semibold text-slate-300 animate-pulse">Loading Inventory...</h3>
-              </div>
-          ) : components.length > 0 ? (
-              sortedAndFilteredComponents.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {sortedAndFilteredComponents.map((component, index) => (
-                      <ComponentCard
-                      key={component.id}
-                      component={component}
-                      index={index}
-                      onDelete={handleDeleteComponent}
-                      onOpenIssueModal={handleOpenIssueModal}
-                      onReturnIssue={handleReturnIssue}
-                      onOpenEditModal={handleOpenEditModal}
-                      onToggleAvailability={handleToggleAvailability}
-                      onOpenMaintenanceModal={handleOpenMaintenanceModal}
-                      />
-                  ))}
-                  </div>
-              ) : (
-                  <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
-                      <h3 className="text-xl font-semibold text-slate-300">No components found</h3>
-                      <p className="text-slate-500 mt-2">Try adjusting your search or filter criteria.</p>
-                  </div>
-              )
-          ) : (
-              <div className="text-center py-16 px-6 bg-slate-800/80 backdrop-blur-sm rounded-lg border border-slate-700">
-                  <div className="flex justify-center mb-4 text-sky-500">
-                      <EmptyStateIcon />
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-200">Your inventory is empty!</h3>
-                  <p className="text-slate-400 mt-2">Let's add your first component to get started.</p>
-                  <button
-                      onClick={() => setIsAddModalOpen(true)}
-                      className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-indigo-600/30 transform hover:scale-105"
-                  >
-                      <PlusIcon />
-                      Add Your First Component
-                  </button>
-              </div>
-          )}
-        </main>
-      ) : (
-        <ProjectHub
-          projects={projects}
-          inventoryComponents={components}
-          onAddProject={handleAddProject}
-          onUpdateProject={handleUpdateProject}
-          onDeleteProject={handleDeleteProject}
-        />
-      )}
+        )}
 
+        <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between p-4 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-lg">
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto flex-grow">
+              <div className="relative flex-grow">
+                  <input
+                      type="text"
+                      placeholder="Search by component name..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="w-full bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      aria-label="Search components"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <SearchIcon />
+                  </div>
+              </div>
+              <select
+                  value={categoryFilter}
+                  onChange={e => setCategoryFilter(e.target.value as Category | 'all')}
+                  className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  aria-label="Filter by category"
+              >
+                  <option value="all">All Categories</option>
+                  {Object.values(Category).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                  ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto justify-start md:justify-end">
+                <select
+                    value={sortConfig.key}
+                    onChange={e => setSortConfig({ ...sortConfig, key: e.target.value as SortKey })}
+                    className="bg-slate-800 border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    aria-label="Sort by"
+                >
+                    <option value="default">Default Sort</option>
+                    <option value="name">Name</option>
+                    <option value="category">Category</option>
+                    <option value="availability">Availability</option>
+                </select>
+                <button
+                    onClick={() => setSortConfig({ ...sortConfig, direction: sortConfig.direction === 'ascending' ? 'descending' : 'ascending' })}
+                    disabled={sortConfig.key === 'default'}
+                    className="p-2 bg-slate-800 border border-slate-700 rounded-md shadow-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                    aria-label={`Sort ${sortConfig.direction === 'ascending' ? 'descending' : 'ascending'}`}
+                >
+                    {sortConfig.direction === 'ascending' ? <ArrowUpIcon /> : <ArrowDownIcon />}
+                </button>
+            </div>
+        </div>
+        
+        {isLoading ? (
+            <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
+                <h3 className="text-xl font-semibold text-slate-300 animate-pulse">Loading Inventory...</h3>
+            </div>
+        ) : components.length > 0 ? (
+            sortedAndFilteredComponents.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {sortedAndFilteredComponents.map((component, index) => (
+                    <ComponentCard
+                    key={component.id}
+                    component={component}
+                    index={index}
+                    onDelete={handleDeleteComponent}
+                    onOpenIssueModal={handleOpenIssueModal}
+                    onReturnIssue={handleReturnIssue}
+                    onOpenEditModal={handleOpenEditModal}
+                    onToggleAvailability={handleToggleAvailability}
+                    onOpenMaintenanceModal={handleOpenMaintenanceModal}
+                    />
+                ))}
+                </div>
+            ) : (
+                <div className="text-center py-16 px-6 bg-slate-800/50 rounded-lg border border-slate-700">
+                    <h3 className="text-xl font-semibold text-slate-300">No components found</h3>
+                    <p className="text-slate-500 mt-2">Try adjusting your search or filter criteria.</p>
+                </div>
+            )
+        ) : (
+            <div className="text-center py-16 px-6 bg-slate-800/80 backdrop-blur-sm rounded-lg border border-slate-700">
+                <div className="flex justify-center mb-4 text-sky-500">
+                    <EmptyStateIcon />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-200">Your inventory is empty!</h3>
+                <p className="text-slate-400 mt-2">Let's add your first component to get started.</p>
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-indigo-600/30 transform hover:scale-105"
+                >
+                    <PlusIcon />
+                    Add Your First Component
+                </button>
+            </div>
+        )}
+      </main>
 
       {isAddModalOpen && (
         <AddComponentModal
