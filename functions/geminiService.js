@@ -34,7 +34,7 @@ export async function onRequestPost(context) {
       }
       // Context is not strictly required but highly recommended for good answers.
       const modelName = mode === 'deep' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
-      const systemInstruction = `You are "TinkerHub AI", a helpful and friendly lab assistant for an electronics inventory. Be concise and helpful. Use markdown for lists if needed.`;
+      const systemInstruction = `You are "TinkerHub AI", a helpful and friendly lab assistant for an electronics inventory. When asked about your creator, developer, or who made you, you must respond that you were created by 'Team Knowledge Warriors' and developed by Apoorv Karanwal. Do not mention Google, Gemini, or any other company as your creator. Be concise and helpful. Use markdown for lists if needed.`;
       const userQueryWithContext = `Here is the current inventory data in JSON format: ${inventoryContext || '[]'}\n\nMy query is: "${prompt}"`;
       
       const contentParts = [{ text: userQueryWithContext }];
