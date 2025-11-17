@@ -13,7 +13,6 @@ interface ComponentCardProps {
   onOpenEditModal: (component: Component) => void;
   onToggleAvailability: (component: Component) => void;
   onOpenMaintenanceModal: (component: Component) => void;
-  isAdmin: boolean;
 }
 
 const LinkTypeIcon: React.FC<{type: LinkType}> = ({ type }) => {
@@ -25,7 +24,7 @@ const LinkTypeIcon: React.FC<{type: LinkType}> = ({ type }) => {
     }
 };
 
-const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability, onOpenMaintenanceModal, isAdmin }) => {
+const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenIssueModal, onReturnIssue, onDelete, onOpenEditModal, onToggleAvailability, onOpenMaintenanceModal }) => {
   const availableQuantity = component.totalQuantity - (component.issuedTo || []).reduce((acc, issue) => acc + (issue.quantity || 1), 0);
   const availabilityPercentage = component.totalQuantity > 0 ? (availableQuantity / component.totalQuantity) * 100 : 0;
   
@@ -53,15 +52,13 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenI
           UNDER MAINTENANCE
         </div>
       )}
-      {isAdmin && (
-        <button 
-          onClick={() => onDelete(component.id)}
-          className="absolute top-3 right-3 z-10 p-2 bg-slate-900/50 rounded-full text-slate-400 hover:bg-red-600 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100"
-          aria-label={`Delete ${component.name}`}
-        >
-          <TrashIcon />
-        </button>
-      )}
+      <button 
+        onClick={() => onDelete(component.id)}
+        className="absolute top-3 right-3 z-10 p-2 bg-slate-900/50 rounded-full text-slate-400 hover:bg-red-600 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100"
+        aria-label={`Delete ${component.name}`}
+      >
+        <TrashIcon />
+      </button>
 
       <img
         className="w-full h-48 object-cover"
@@ -114,43 +111,39 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenI
                 <span className={`text-sm font-medium ${isAvailable ? 'text-green-400' : 'text-red-400'}`}>
                     {isAvailable ? 'Available for Issue' : 'Not Available'}
                 </span>
-                {isAdmin && (
-                  <label htmlFor={`toggle-${component.id}`} className="flex items-center cursor-pointer">
-                      <div className="relative">
-                          <input type="checkbox" id={`toggle-${component.id}`} className="sr-only" checked={isAvailable} onChange={() => onToggleAvailability(component)} />
-                          <div className="block bg-slate-600 w-14 h-8 rounded-full"></div>
-                          <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${isAvailable ? 'translate-x-6 bg-green-400' : ''}`}></div>
-                      </div>
-                  </label>
-                )}
+                <label htmlFor={`toggle-${component.id}`} className="flex items-center cursor-pointer">
+                    <div className="relative">
+                        <input type="checkbox" id={`toggle-${component.id}`} className="sr-only" checked={isAvailable} onChange={() => onToggleAvailability(component)} />
+                        <div className="block bg-slate-600 w-14 h-8 rounded-full"></div>
+                        <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${isAvailable ? 'translate-x-6 bg-green-400' : ''}`}></div>
+                    </div>
+                </label>
             </div>
             
-            {isAdmin && (
-              <div className="flex gap-2">
-                   <button 
-                      onClick={() => onOpenIssueModal(component)}
-                      disabled={availableQuantity <= 0 || !isAvailable || component.isUnderMaintenance}
-                      className="flex-1 flex items-center justify-center gap-1 text-sm bg-yellow-600 hover:bg-yellow-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-semibold py-2 px-3 rounded-lg transition duration-200"
-                      aria-label={`Issue ${component.name}`}
-                  >
-                      <MinusIcon /> Issue
-                  </button>
-                  <button
-                      onClick={() => onOpenEditModal(component)}
-                      className="p-2.5 flex items-center justify-center text-sm bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition duration-200"
-                      aria-label={`Edit ${component.name}`}
-                  >
-                      <EditIcon />
-                  </button>
-                  <button
-                      onClick={() => onOpenMaintenanceModal(component)}
-                      className="p-2.5 flex items-center justify-center text-sm bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition duration-200"
-                      aria-label={`Maintenance for ${component.name}`}
-                  >
-                      <MaintenanceIcon />
-                  </button>
-              </div>
-            )}
+            <div className="flex gap-2">
+                 <button 
+                    onClick={() => onOpenIssueModal(component)}
+                    disabled={availableQuantity <= 0 || !isAvailable || component.isUnderMaintenance}
+                    className="flex-1 flex items-center justify-center gap-1 text-sm bg-yellow-600 hover:bg-yellow-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-semibold py-2 px-3 rounded-lg transition duration-200"
+                    aria-label={`Issue ${component.name}`}
+                >
+                    <MinusIcon /> Issue
+                </button>
+                <button
+                    onClick={() => onOpenEditModal(component)}
+                    className="p-2.5 flex items-center justify-center text-sm bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition duration-200"
+                    aria-label={`Edit ${component.name}`}
+                >
+                    <EditIcon />
+                </button>
+                <button
+                    onClick={() => onOpenMaintenanceModal(component)}
+                    className="p-2.5 flex items-center justify-center text-sm bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition duration-200"
+                    aria-label={`Maintenance for ${component.name}`}
+                >
+                    <MaintenanceIcon />
+                </button>
+            </div>
 
             <div className="mt-2">
                 <h4 className="text-sm font-semibold text-slate-300 mb-2">Issue Log</h4>
@@ -163,15 +156,13 @@ const ComponentCard: React.FC<ComponentCardProps> = ({ component, index, onOpenI
                                     <p className="text-slate-400">{new Date(issue.issuedDate).toLocaleDateString()}</p>
 
                                 </div>
-                                {isAdmin && (
-                                  <button
-                                      onClick={() => onReturnIssue(component.id, issue.id)}
-                                      className="flex items-center justify-center gap-1 text-xs bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-2 rounded-md transition duration-200"
-                                      aria-label={`Return component issued to ${issue.studentName}`}
-                                  >
-                                      <ReturnIcon /> Return
-                                  </button>
-                                )}
+                                <button
+                                    onClick={() => onReturnIssue(component.id, issue.id)}
+                                    className="flex items-center justify-center gap-1 text-xs bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-2 rounded-md transition duration-200"
+                                    aria-label={`Return component issued to ${issue.studentName}`}
+                                >
+                                    <ReturnIcon /> Return
+                                </button>
                             </div>
                         ))}
                     </div>
