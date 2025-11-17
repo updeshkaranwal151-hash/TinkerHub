@@ -373,6 +373,7 @@ const App: React.FC = () => {
         onExport={handleExportCSV}
         isLightMode={isLightMode}
         onToggleLightMode={() => setIsLightMode(prev => !prev)}
+        isAdmin={isAdmin}
       />
       
       <main className="container mx-auto p-4 md:p-8 flex-grow flex flex-col">
@@ -462,6 +463,7 @@ const App: React.FC = () => {
                     onOpenEditModal={handleOpenEditModal}
                     onToggleAvailability={handleToggleAvailability}
                     onOpenMaintenanceModal={handleOpenMaintenanceModal}
+                    isAdmin={isAdmin}
                     />
                 ))}
                 </div>

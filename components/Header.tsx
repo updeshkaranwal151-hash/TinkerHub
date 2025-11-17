@@ -11,11 +11,13 @@ interface HeaderProps {
     onExport: () => void;
     isLightMode: boolean;
     onToggleLightMode: () => void;
+    isAdmin: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
     onAddComponent, onClearAll, onOpenShareModal, 
-    onOpenImportModal, onExport, isLightMode, onToggleLightMode, onOpenScanner
+    onOpenImportModal, onExport, isLightMode, onToggleLightMode, onOpenScanner,
+    isAdmin
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -65,41 +67,49 @@ const Header: React.FC<HeaderProps> = ({
                 {isLightMode ? <MoonIcon /> : <SunIcon />}
             </button>
             
-            <button
-                onClick={onOpenScanner}
-                className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition duration-300 shadow-lg shadow-sky-600/30"
-                title="Scan Component with AI"
-            >
-                <ScanIcon />
-                <span className="hidden sm:inline">Scan</span>
-            </button>
-            <button
-              onClick={onAddComponent}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition duration-300 shadow-lg shadow-indigo-600/30"
-            >
-              <PlusIcon />
-              <span className="hidden sm:inline">Add</span>
-              <span className="hidden lg:inline"> Component</span>
-            </button>
+            {isAdmin && (
+              <>
+                <button
+                    onClick={onOpenScanner}
+                    className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition duration-300 shadow-lg shadow-sky-600/30"
+                    title="Scan Component with AI"
+                >
+                    <ScanIcon />
+                    <span className="hidden sm:inline">Scan</span>
+                </button>
+                <button
+                  onClick={onAddComponent}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 sm:px-4 rounded-lg transition duration-300 shadow-lg shadow-indigo-600/30"
+                >
+                  <PlusIcon />
+                  <span className="hidden sm:inline">Add</span>
+                  <span className="hidden lg:inline"> Component</span>
+                </button>
+              </>
+            )}
           
           {/* Desktop Buttons */}
           <div className="hidden md:flex items-center gap-2">
-            <button
-                onClick={onOpenImportModal}
-                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300"
-                aria-label="Import from CSV"
-            >
-                <ImportIcon />
-                <span className="hidden lg:inline">Import</span>
-            </button>
-            <button
-                onClick={onExport}
-                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300"
-                aria-label="Export to CSV"
-            >
-                <ExportIcon />
-                <span className="hidden lg:inline">Export</span>
-            </button>
+            {isAdmin && (
+              <>
+                <button
+                    onClick={onOpenImportModal}
+                    className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300"
+                    aria-label="Import from CSV"
+                >
+                    <ImportIcon />
+                    <span className="hidden lg:inline">Import</span>
+                </button>
+                <button
+                    onClick={onExport}
+                    className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300"
+                    aria-label="Export to CSV"
+                >
+                    <ExportIcon />
+                    <span className="hidden lg:inline">Export</span>
+                </button>
+              </>
+            )}
              <button
               onClick={onOpenShareModal}
               className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition"
@@ -108,14 +118,16 @@ const Header: React.FC<HeaderProps> = ({
               <ShareIcon />
               <span className="hidden lg:inline">Share</span>
             </button>
-            <button
-              onClick={onClearAll}
-              className="flex items-center gap-2 bg-red-800 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 shadow-lg shadow-red-800/30"
-              aria-label="Clear all components"
-            >
-              <TrashIcon />
-              <span className="hidden lg:inline">Clear All</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={onClearAll}
+                className="flex items-center gap-2 bg-red-800 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 shadow-lg shadow-red-800/30"
+                aria-label="Clear all components"
+              >
+                <TrashIcon />
+                <span className="hidden lg:inline">Clear All</span>
+              </button>
+            )}
           </div>
 
           {/* Mobile Dropdown */}
@@ -129,17 +141,21 @@ const Header: React.FC<HeaderProps> = ({
                           <MenuButton onClick={() => { onOpenShareModal(); setIsMenuOpen(false); }}>
                               <ShareIcon /> Share App
                           </MenuButton>
-                          <div className="my-1 border-t border-slate-700" />
-                          <MenuButton onClick={() => { onOpenImportModal(); setIsMenuOpen(false); }}>
-                              <ImportIcon /> Import CSV
-                          </MenuButton>
-                          <MenuButton onClick={() => { onExport(); setIsMenuOpen(false); }}>
-                              <ExportIcon /> Export CSV
-                          </MenuButton>
-                          <div className="my-1 border-t border-slate-700" />
-                          <MenuButton onClick={() => { onClearAll(); setIsMenuOpen(false); }}>
-                              <TrashIcon /> Clear All
-                          </MenuButton>
+                          {isAdmin && (
+                            <>
+                              <div className="my-1 border-t border-slate-700" />
+                              <MenuButton onClick={() => { onOpenImportModal(); setIsMenuOpen(false); }}>
+                                  <ImportIcon /> Import CSV
+                              </MenuButton>
+                              <MenuButton onClick={() => { onExport(); setIsMenuOpen(false); }}>
+                                  <ExportIcon /> Export CSV
+                              </MenuButton>
+                              <div className="my-1 border-t border-slate-700" />
+                              <MenuButton onClick={() => { onClearAll(); setIsMenuOpen(false); }}>
+                                  <TrashIcon /> Clear All
+                              </MenuButton>
+                            </>
+                          )}
                       </div>
                   </div>
               )}
