@@ -59,7 +59,7 @@ const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onUserLogin, on
               onClick={onUserLogin}
               className="w-full flex items-center justify-center py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-lg shadow-sky-600/30 transition-all duration-300 transform hover:scale-105"
           >
-              User Panel
+              Student Panel
           </button>
           <button
               onClick={onAdminSuccess}

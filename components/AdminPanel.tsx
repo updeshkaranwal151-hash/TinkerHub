@@ -1,9 +1,7 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { Category, Component, AccessLogRecord } from '../types.ts';
+import { Category, Component, AccessLogRecord, Project, ProjectStatus, ProjectType } from '../types.ts';
 import * as localStorageService from '../services/localStorageService.ts';
-import { UploadIcon, TrashIcon, EditIcon, EyeIcon, CheckCircleIcon, DatabaseIcon, MaintenanceIcon, WarningIcon, ArrowUpIcon, ArrowDownIcon, SearchIcon, LinkIcon, MoonIcon, SunIcon, UserIcon, ArrowLeftIcon, ClipboardListIcon } from './Icons.tsx'; // Updated imports for new icons
+import { UploadIcon, TrashIcon, EditIcon, EyeIcon, CheckCircleIcon, DatabaseIcon, MaintenanceIcon, WarningIcon, ArrowUpIcon, ArrowDownIcon, SearchIcon, LinkIcon, MoonIcon, SunIcon, UserIcon, ArrowLeftIcon, ClipboardListIcon, ChevronDownIcon, ProjectIcon as ProjectIconLarge } from './Icons.tsx'; // Updated imports for new icons
 import EditImageModal from './EditImageModal.tsx';
 import ConfirmDialog from './ConfirmDialog.tsx';
 import AdminImportExportModal from './AdminImportExportModal.tsx';
@@ -14,6 +12,8 @@ interface AdminPanelProps {
   onLibraryUpdate: () => void;
   components: Component[];
   setComponents: React.Dispatch<React.SetStateAction<Component[]>>;
+  projects: Project[];
+  onUpdateProjectStatus: (projectId: string, status: ProjectStatus, feedback?: string) => void;
   imageLibrary: Record<string, ImageData[]>;
   isLightMode: boolean;
   onToggleLightMode: () => void;
@@ -24,7 +24,7 @@ interface AdminPanelProps {
   onDeleteComponent: (id: string) => void;
 }
 
-type AdminTab = 'analytics' | 'inventory' | 'student-issues' | 'image-library' | 'settings' | 'access-log';
+type AdminTab = 'analytics' | 'inventory' | 'student-issues' | 'project-submissions' | 'image-library' | 'settings' | 'access-log';
 
 // Helper to parse user agent strings into a more readable format
 const parseUserAgent = (ua: string): string => {
@@ -85,7 +85,7 @@ const parseUserAgent = (ua: string): string => {
 
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ 
-    onExit, onLibraryUpdate, components, setComponents, 
+    onExit, onLibraryUpdate, components, setComponents, projects, onUpdateProjectStatus,
     imageLibrary, isLightMode, onToggleLightMode,
     onOpenEditModal, onOpenMaintenanceModal, onToggleMaintenance, onDeleteComponent
 }) => {
@@ -118,9 +118,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   // Access Log states
   const [accessLog, setAccessLog] = useState<AccessLogRecord[]>([]);
   const [logSearchQuery, setLogSearchQuery] = useState('');
+  
+  // Project states
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
 
   const [isImportExportModalOpen, setIsImportExportModalOpen] = useState(false);
+  
+  const pendingProjectCount = useMemo(() => projects.filter(p => p.status === ProjectStatus.PENDING).length, [projects]);
 
 
   // Fetch initial data
@@ -128,7 +133,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     setCustomLibrary(localStorageService.getCustomImageLibrary());
     setAnalyticsData(localStorageService.getAnalyticsData());
     setAccessLog(localStorageService.getAccessLog());
-  }, [components, imageLibrary]); // Re-run if data in App.tsx changes
+  }, [components, imageLibrary, projects]); // Re-run if data in App.tsx changes
   
   useEffect(() => {
     // Reset specific states when tab changes to avoid stale selections
@@ -432,6 +437,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         parseUserAgent(log.userAgent).toLowerCase().includes(query)
     );
   }, [accessLog, logSearchQuery]);
+  
+  const handleProjectAction = (project: Project, newStatus: ProjectStatus) => {
+    if (newStatus === ProjectStatus.REJECTED) {
+      const feedback = prompt(`Please provide a reason for rejecting the project "${project.projectName}":`);
+      onUpdateProjectStatus(project.id, newStatus, feedback || "No feedback provided.");
+    } else {
+      onUpdateProjectStatus(project.id, newStatus);
+    }
+  };
 
 
   return (
@@ -459,13 +473,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         </header>
         <main className="container mx-auto p-4 md:p-8 flex-grow">
           <div className="flex-shrink-0 flex justify-center mb-6 border-b border-slate-700/50 overflow-x-auto">
-            {(['analytics', 'inventory', 'student-issues', 'image-library', 'access-log', 'settings'] as AdminTab[]).map(tab => (
+            {(['analytics', 'inventory', 'student-issues', 'project-submissions', 'image-library', 'access-log', 'settings'] as AdminTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as AdminTab)}
-                className={`py-3 px-4 text-sm sm:text-base font-semibold transition-colors duration-300 rounded-t-lg whitespace-nowrap ${activeTab === tab ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-white'}`}
+                className={`py-3 px-4 text-sm sm:text-base font-semibold transition-colors duration-300 rounded-t-lg whitespace-nowrap relative ${activeTab === tab ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-white'}`}
               >
                 {tab.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                {tab === 'project-submissions' && pendingProjectCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-5 w-5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-xs items-center justify-center">{pendingProjectCount}</span>
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -510,6 +530,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                         <WarningIcon />
                         <h3 className="text-sm font-bold text-slate-400 uppercase">Low Stock Alerts</h3>
                         <p className="text-3xl font-bold">{componentsLowStock}</p>
+                    </div>
+                     <div className="bg-slate-700/50 p-4 rounded-lg flex flex-col items-center justify-center gap-2">
+                        <ProjectIconLarge />
+                        <h3 className="text-sm font-bold text-slate-400 uppercase">Pending Projects</h3>
+                        <p className="text-3xl font-bold">{pendingProjectCount}</p>
                     </div>
                   </div>
                 </div>
@@ -798,6 +823,74 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
                 )}
               </div>
+            )}
+            
+            {activeTab === 'project-submissions' && (
+               <div className="space-y-4">
+                 <h2 className="text-xl font-bold text-sky-400 mb-4">Project Submissions</h2>
+                 {projects.length > 0 ? (
+                    projects.map(project => (
+                        <div key={project.id} className="bg-slate-800/70 border border-slate-700 rounded-lg overflow-hidden">
+                            <button onClick={() => setExpandedProjectId(expandedProjectId === project.id ? null : project.id)} className="w-full p-4 text-left flex justify-between items-center hover:bg-slate-700/50">
+                                <div>
+                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                        project.status === ProjectStatus.PENDING ? 'bg-yellow-500/20 text-yellow-300' :
+                                        project.status === ProjectStatus.APPROVED ? 'bg-green-500/20 text-green-300' :
+                                        project.status === ProjectStatus.REJECTED ? 'bg-red-500/20 text-red-300' : 'bg-slate-600 text-slate-300'
+                                    }`}>{project.status}</span>
+                                    <h3 className="text-lg font-bold text-white mt-1">{project.projectName}</h3>
+                                    <p className="text-sm text-slate-400">by {project.teamName} (submitted by {project.submitterStudentName})</p>
+                                </div>
+                                <ChevronDownIcon className={`h-6 w-6 text-slate-400 transition-transform ${expandedProjectId === project.id ? 'rotate-180' : ''}`} />
+                            </button>
+                            {expandedProjectId === project.id && (
+                                <div className="p-4 border-t border-slate-700 space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        <div><strong className="text-slate-400">Team Email:</strong> <span className="text-sky-400">{project.teamEmail}</span></div>
+                                        <div><strong className="text-slate-400">Mobile:</strong> {project.mobileNumber || 'N/A'}</div>
+                                        <div><strong className="text-slate-400">Project Type:</strong> {project.projectType}</div>
+                                        <div><strong className="text-slate-400">Submitted:</strong> {new Date(project.submittedAt).toLocaleString()}</div>
+                                    </div>
+                                    <div><strong className="text-slate-400">Team Members:</strong> <p className="text-slate-300 whitespace-pre-wrap">{project.teamMembers}</p></div>
+                                    <div><strong className="text-slate-400">Features:</strong> <p className="text-slate-300 whitespace-pre-wrap">{project.features}</p></div>
+                                    <div><strong className="text-slate-400">Description:</strong> <p className="text-slate-300 whitespace-pre-wrap">{project.description}</p></div>
+                                    
+                                    <div>
+                                        <strong className="text-slate-400">Required Components:</strong>
+                                        <ul className="list-disc list-inside mt-1 text-slate-300">
+                                            {project.requiredComponents.map(c => <li key={c.componentId}>{c.componentName} (x{c.quantity})</li>)}
+                                        </ul>
+                                    </div>
+
+                                    {project.prototypeDrawingUrl && (
+                                        <div>
+                                            <strong className="text-slate-400">Prototype Drawing:</strong>
+                                            <img src={project.prototypeDrawingUrl} alt="Prototype" className="mt-2 rounded-lg max-w-sm border border-slate-600"/>
+                                        </div>
+                                    )}
+
+                                    {project.adminFeedback && (
+                                        <div><strong className="text-slate-400">Admin Feedback:</strong> <p className="text-yellow-300 bg-yellow-900/30 p-2 rounded-md whitespace-pre-wrap">{project.adminFeedback}</p></div>
+                                    )}
+
+                                    <div className="flex justify-end gap-3 pt-3 border-t border-slate-600">
+                                        {project.status === ProjectStatus.PENDING && (
+                                            <>
+                                                <button onClick={() => handleProjectAction(project, ProjectStatus.REJECTED)} className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg">Reject</button>
+                                                <button onClick={() => handleProjectAction(project, ProjectStatus.APPROVED)} className="py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">Approve</button>
+                                            </>
+                                        )}
+                                        {project.status === ProjectStatus.APPROVED && <p className="text-green-400 font-semibold">Project Approved</p>}
+                                        {project.status === ProjectStatus.REJECTED && <p className="text-red-400 font-semibold">Project Rejected</p>}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))
+                 ) : (
+                    <p className="text-center text-slate-500 italic py-8">No projects have been submitted yet.</p>
+                 )}
+               </div>
             )}
 
             {activeTab === 'image-library' && (

@@ -59,3 +59,46 @@ export interface AccessLogRecord {
   timestamp: string;
   userAgent: string;
 }
+
+// --- Project Hub Types ---
+export enum ProjectStatus {
+  PENDING = 'Pending Approval',
+  APPROVED = 'Approved',
+  REJECTED = 'Rejected',
+  COMPLETED = 'Completed',
+}
+
+export enum ProjectType {
+    HARDWARE = 'Hardware',
+    SOFTWARE = 'Software',
+    HYBRID = 'Hardware & Software',
+}
+
+export interface RequiredComponent {
+    componentId: string;
+    componentName: string;
+    quantity: number;
+}
+
+export interface Project {
+  id: string;
+  submitterStudentName: string; // The student who submitted it
+  projectName: string;
+  projectType: ProjectType;
+  teamName: string;
+  teamEmail: string;
+  teamMembers: string; // Storing as a comma-separated string from textarea
+  mobileNumber?: string;
+  features: string;
+  description: string;
+  prototypeDrawingUrl?: string; // Base64 data URL
+  requiredComponents: RequiredComponent[];
+  status: ProjectStatus;
+  submittedAt: string;
+  adminFeedback?: string; // For rejection reasons
+  
+  // Advanced fields
+  timeline?: string;
+  budget?: string;
+  techStack?: string;
+}

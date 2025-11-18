@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Component, Category } from '../types.ts';
+// FIX: Import `Project` type to be used in the `AllAppData` interface.
+import { Component, Category, Project } from '../types.ts';
 import { ImageData } from './imageLibrary.ts';
 import * as localStorageService from '../services/localStorageService.ts';
 import { ImportIcon, ExportIcon } from './Icons.tsx';
@@ -15,6 +16,8 @@ interface AdminImportExportModalProps {
 
 interface AllAppData {
     components: Component[];
+    // FIX: Added 'projects' property to match the type definition used by the import/export service.
+    projects: Project[];
     imageLibrary: Record<string, ImageData[]>;
     analytics: any; // AnalyticsData type
     adminPassword: string | null;
@@ -82,7 +85,7 @@ const AdminImportExportModal: React.FC<AdminImportExportModalProps> = ({
         const importedData: AllAppData = JSON.parse(text);
 
         // Basic validation for critical keys
-        if (!importedData.components || !importedData.imageLibrary || !importedData.analytics) {
+        if (!importedData.components || !importedData.projects || !importedData.imageLibrary || !importedData.analytics) {
             throw new Error("Invalid backup file structure. Missing core data.");
         }
 

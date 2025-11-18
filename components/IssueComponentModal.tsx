@@ -1,16 +1,22 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Component } from '../types.ts';
 
 interface IssueComponentModalProps {
   component: Component | null;
   onClose: () => void;
   onIssue: (componentId: string, studentName: string, quantity: number) => void;
+  studentName?: string;
 }
 
-const IssueComponentModal: React.FC<IssueComponentModalProps> = ({ component, onClose, onIssue }) => {
-  const [studentName, setStudentName] = useState('');
+const IssueComponentModal: React.FC<IssueComponentModalProps> = ({ component, onClose, onIssue, studentName: prefilledStudentName }) => {
+  const [studentName, setStudentName] = useState(prefilledStudentName || '');
   const [quantity, setQuantity] = useState('1');
+  
+  useEffect(() => {
+    if (prefilledStudentName) {
+      setStudentName(prefilledStudentName);
+    }
+  }, [prefilledStudentName]);
 
   if (!component) return null;
 
@@ -44,10 +50,11 @@ const IssueComponentModal: React.FC<IssueComponentModalProps> = ({ component, on
               id="studentName" 
               value={studentName} 
               onChange={e => setStudentName(e.target.value)} 
-              required 
-              className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              required
+              readOnly={!!prefilledStudentName}
+              className={`mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${!!prefilledStudentName ? 'bg-slate-800 cursor-not-allowed' : ''}`}
               placeholder="e.g., Jane Doe"
-              autoFocus
+              autoFocus={!prefilledStudentName}
             />
           </div>
 
@@ -62,6 +69,7 @@ const IssueComponentModal: React.FC<IssueComponentModalProps> = ({ component, on
               min="1"
               max={availableQuantity}
               className="mt-1 block w-full bg-slate-700 border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              autoFocus={!!prefilledStudentName}
             />
             <p className="text-xs text-slate-400 mt-1">Available: {availableQuantity}</p>
           </div>

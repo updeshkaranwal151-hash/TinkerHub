@@ -1,8 +1,9 @@
-import { Component, IssueRecord, Category, MaintenanceRecord, AccessLogRecord } from '../types.ts';
+import { Component, IssueRecord, Category, MaintenanceRecord, AccessLogRecord, Project, ProjectStatus } from '../types.ts';
 import { ImageData } from '../components/imageLibrary.ts';
 
 
 const COMPONENTS_STORAGE_KEY = 'atl-inventory-components';
+const PROJECTS_STORAGE_KEY = 'atl-inventory-projects';
 const IMAGE_LIBRARY_KEY = 'atl-inventory-custom-images';
 const ANALYTICS_KEY = 'atl-inventory-analytics';
 const VISITOR_ID_KEY = 'atl-inventory-visitor-id';
@@ -203,6 +204,55 @@ export const deleteMaintenanceLog = (componentId: string, logId: string): Compon
     return updatedComponent;
 };
 
+// --- Project Hub Functions ---
+
+const getProjectsFromStorage = (): Project[] => {
+  try {
+    const data = localStorage.getItem(PROJECTS_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("Could not parse projects from LocalStorage", error);
+    return [];
+  }
+};
+
+const saveProjectsToStorage = (projects: Project[]): void => {
+  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+};
+
+export const getProjects = (): Project[] => {
+  const projects = getProjectsFromStorage();
+  return projects.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+};
+
+export const addProject = (projectData: Omit<Project, 'id' | 'submittedAt' | 'status'>): Project => {
+  const projects = getProjectsFromStorage();
+  const newProject: Project = {
+    ...projectData,
+    id: crypto.randomUUID(),
+    submittedAt: new Date().toISOString(),
+    status: ProjectStatus.PENDING,
+  };
+  const updatedProjects = [newProject, ...projects];
+  saveProjectsToStorage(updatedProjects);
+  return newProject;
+};
+
+export const updateProjectStatus = (projectId: string, status: ProjectStatus, feedback?: string): Project => {
+  const projects = getProjectsFromStorage();
+  let updatedProject: Project | undefined;
+  const updatedProjects = projects.map(p => {
+    if (p.id === projectId) {
+      updatedProject = { ...p, status, adminFeedback: feedback };
+      return updatedProject;
+    }
+    return p;
+  });
+  if (!updatedProject) throw new Error("Project not found");
+  saveProjectsToStorage(updatedProjects);
+  return updatedProject;
+};
+
 
 // --- Custom Image Library Functions ---
 
@@ -323,6 +373,7 @@ export const setUserPassword = (password: string): void => {
 // --- Global Data Management ---
 interface AllAppData {
   components: Component[];
+  projects: Project[];
   imageLibrary: Record<string, ImageData[]>;
   analytics: AnalyticsData;
   adminPassword: string | null;
@@ -332,6 +383,7 @@ interface AllAppData {
 export const exportAllAppData = (): AllAppData => {
   return {
     components: getComponentsFromStorage(),
+    projects: getProjectsFromStorage(),
     imageLibrary: getCustomImageLibrary(),
     analytics: getAnalyticsData(),
     adminPassword: getAdminPassword(),
@@ -340,9 +392,10 @@ export const exportAllAppData = (): AllAppData => {
 };
 
 export const importAllAppData = (data: AllAppData): void => {
-  localStorage.setItem(COMPONENTS_STORAGE_KEY, JSON.stringify(data.components));
-  localStorage.setItem(IMAGE_LIBRARY_KEY, JSON.stringify(data.imageLibrary));
-  localStorage.setItem(ANALYTICS_KEY, JSON.stringify(data.analytics));
+  localStorage.setItem(COMPONENTS_STORAGE_KEY, JSON.stringify(data.components || []));
+  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(data.projects || []));
+  localStorage.setItem(IMAGE_LIBRARY_KEY, JSON.stringify(data.imageLibrary || {}));
+  localStorage.setItem(ANALYTICS_KEY, JSON.stringify(data.analytics || { totalVisits: 0, uniqueVisitors: 0, successfulLogins: 0 }));
   if (data.adminPassword) localStorage.setItem(ADMIN_PASSWORD_KEY, data.adminPassword);
   if (data.userPassword) localStorage.setItem(USER_PASSWORD_KEY, data.userPassword);
 };
@@ -350,6 +403,7 @@ export const importAllAppData = (data: AllAppData): void => {
 
 export const clearAllAppData = (): void => {
   localStorage.removeItem(COMPONENTS_STORAGE_KEY);
+  localStorage.removeItem(PROJECTS_STORAGE_KEY);
   localStorage.removeItem(IMAGE_LIBRARY_KEY);
   localStorage.removeItem(ANALYTICS_KEY);
   localStorage.removeItem(VISITOR_ID_KEY); // Also clear visitor ID

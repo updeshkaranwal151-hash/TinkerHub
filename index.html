@@ -157,6 +157,21 @@
         background-color: #94a3b8; /* slate-400 */
       }
 
+      /* Success Animation for Project Submission */
+      @keyframes scale-in-fade-in {
+        from {
+          transform: scale(0.5);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .animate-success {
+        animation: scale-in-fade-in 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      }
+
 
       /* Light Mode overrides */
       body.light-mode {
