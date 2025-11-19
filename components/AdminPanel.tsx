@@ -887,15 +887,39 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                         <div><strong className="text-slate-400">Admin Feedback:</strong> <p className="text-yellow-300 bg-yellow-900/30 p-2 rounded-md whitespace-pre-wrap">{project.adminFeedback}</p></div>
                                     )}
 
-                                    <div className="flex justify-end gap-3 pt-3 border-t border-slate-600">
+                                    <div className="flex justify-end gap-3 pt-3 border-t border-slate-600 items-center">
                                         {project.status === ProjectStatus.PENDING && (
                                             <>
-                                                <button onClick={() => handleProjectAction(project, ProjectStatus.REJECTED)} className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg">Reject</button>
-                                                <button onClick={() => handleProjectAction(project, ProjectStatus.APPROVED)} className="py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">Approve</button>
+                                                <button onClick={() => handleProjectAction(project, ProjectStatus.REJECTED)} className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-lg shadow-red-600/20 transition">Reject</button>
+                                                <button onClick={() => handleProjectAction(project, ProjectStatus.APPROVED)} className="py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-lg shadow-green-600/20 transition">Approve</button>
                                             </>
                                         )}
-                                        {project.status === ProjectStatus.APPROVED && <p className="text-green-400 font-semibold">Project Approved</p>}
-                                        {project.status === ProjectStatus.REJECTED && <p className="text-red-400 font-semibold">Project Rejected</p>}
+                                        {project.status === ProjectStatus.APPROVED && (
+                                            <>
+                                                 <span className="mr-auto text-green-400 font-semibold flex items-center gap-2 bg-green-400/10 px-3 py-1 rounded-full border border-green-400/20">
+                                                    <CheckCircleIcon className="h-5 w-5" /> Approved
+                                                 </span>
+                                                 <button 
+                                                    onClick={() => handleProjectAction(project, ProjectStatus.REJECTED)} 
+                                                    className="py-2 px-4 bg-slate-700 hover:bg-red-600 text-slate-300 hover:text-white font-medium rounded-lg border border-slate-600 hover:border-red-500 transition-all duration-200"
+                                                >
+                                                    Revoke & Reject
+                                                </button>
+                                            </>
+                                        )}
+                                        {project.status === ProjectStatus.REJECTED && (
+                                            <>
+                                                <span className="mr-auto text-red-400 font-semibold flex items-center gap-2 bg-red-400/10 px-3 py-1 rounded-full border border-red-400/20">
+                                                    Rejected
+                                                </span>
+                                                <button 
+                                                    onClick={() => handleProjectAction(project, ProjectStatus.APPROVED)} 
+                                                    className="py-2 px-4 bg-slate-700 hover:bg-green-600 text-slate-300 hover:text-white font-medium rounded-lg border border-slate-600 hover:border-green-500 transition-all duration-200"
+                                                >
+                                                    Reconsider & Approve
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             )}
