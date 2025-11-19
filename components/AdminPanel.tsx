@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Category, Component, AccessLogRecord, Project, ProjectStatus, ProjectType } from '../types.ts';
 import * as localStorageService from '../services/localStorageService.ts';
@@ -9,6 +10,7 @@ import { ImageData } from './imageLibrary.ts'; // Corrected import path for Imag
 
 interface AdminPanelProps {
   onExit: () => void;
+  onBack?: () => void; // Added prop for navigation
   onLibraryUpdate: () => void;
   components: Component[];
   setComponents: React.Dispatch<React.SetStateAction<Component[]>>;
@@ -85,7 +87,7 @@ const parseUserAgent = (ua: string): string => {
 
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ 
-    onExit, onLibraryUpdate, components, setComponents, projects, onUpdateProjectStatus,
+    onExit, onBack, onLibraryUpdate, components, setComponents, projects, onUpdateProjectStatus,
     imageLibrary, isLightMode, onToggleLightMode,
     onOpenEditModal, onOpenMaintenanceModal, onToggleMaintenance, onDeleteComponent
 }) => {
@@ -451,11 +453,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   return (
     <>
       <div className="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col">
-        <header className="bg-slate-900/70 backdrop-blur-lg shadow-lg sticky top-0 z-20 border-b border-slate-700/50">
+        {/* Upper Header for navigation back to selection */}
+        {onBack && (
+            <div className="bg-slate-900/95 border-b border-slate-700 px-4 py-2 flex items-center sticky top-0 z-30">
+                <button 
+                    onClick={onBack}
+                    className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-semibold"
+                >
+                    <ArrowLeftIcon className="h-4 w-4" /> Back to Dashboard
+                </button>
+            </div>
+        )}
+
+        <header className="bg-slate-900/70 backdrop-blur-lg shadow-lg sticky top-8 z-20 border-b border-slate-700/50" style={{ top: onBack ? '2.5rem' : '0' }}>
           <div className="container mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-extrabold text-white">Admin Panel</h1>
-              <p className="text-sm text-slate-400">Comprehensive Management</p>
+              <h1 className="text-3xl font-extrabold text-white">Analytics Panel</h1>
+              <p className="text-sm text-slate-400">Comprehensive Reports & Management</p>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -466,7 +480,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                   {isLightMode ? <MoonIcon /> : <SunIcon />}
               </button>
               <button onClick={onExit} className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition duration-300">
-                Exit Admin View
+                Logout
               </button>
             </div>
           </div>

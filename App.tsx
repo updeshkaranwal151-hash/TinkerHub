@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Component, IssueRecord, Category, AISuggestions, Project, ProjectStatus } from './types.ts';
 import AddComponentModal from './components/AddComponentModal.tsx';
@@ -8,6 +9,8 @@ import PasswordProtection from './components/PasswordProtection.tsx';
 import * as localStorageService from './services/localStorageService.ts';
 import AILabAssistantModal from './components/AILabAssistantModal.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
+import AdminModeSelection from './components/AdminModeSelection.tsx';
+import AdminControlPanel from './components/AdminControlPanel.tsx';
 import { imageLibrary as defaultImageLibrary, ImageData } from './components/imageLibrary.ts';
 import ImportCSVModal from './components/ImportCSVModal.tsx';
 import MaintenanceModal from './components/MaintenanceModal.tsx';
@@ -46,6 +49,7 @@ const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isStudentLoggedIn, setIsStudentLoggedIn] = useState(false);
   const [currentStudentName, setCurrentStudentName] = useState('');
+  const [adminViewMode, setAdminViewMode] = useState<'selection' | 'analytics' | 'control'>('selection');
   
   // App State
   const [components, setComponents] = useState<Component[]>([]);
@@ -56,6 +60,7 @@ const App: React.FC = () => {
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isAssistantModalOpen, setIsAssistantModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -66,6 +71,7 @@ const App: React.FC = () => {
   // Component-specific states
   const [componentToEdit, setComponentToEdit] = useState<Component | null>(null);
   const [componentForMaintenance, setComponentForMaintenance] = useState<Component | null>(null);
+  const [componentToIssue, setComponentToIssue] = useState<Component | null>(null);
   const [scannedImageData, setScannedImageData] = useState<string | null>(null);
 
   const [isLightMode, setIsLightMode] = useState<boolean>(() => {
@@ -136,6 +142,7 @@ const App: React.FC = () => {
   const handleGoBack = () => {
       setIsAuthenticated(false);
       setIsAdmin(false);
+      setAdminViewMode('selection');
       handleStudentLogout();
   };
 
@@ -147,6 +154,11 @@ const App: React.FC = () => {
       setIsScannerModalOpen(false);
       setScannedImageData(imageDataUrl);
       setIsScanResultModalOpen(true);
+  };
+
+  const handleOpenIssueModal = (component: Component) => {
+    setComponentToIssue(component);
+    setIsIssueModalOpen(true);
   };
 
 
@@ -190,6 +202,8 @@ const App: React.FC = () => {
             c.id === componentId ? updatedComponent : c
         )
     );
+    setIsIssueModalOpen(false);
+    setComponentToIssue(null);
   };
 
   const handleReturnIssue = (componentId: string, issueId: string) => {
@@ -201,6 +215,13 @@ const App: React.FC = () => {
     );
   };
   
+  const handleToggleAvailability = (component: Component) => {
+    const updatedComponent = localStorageService.toggleAvailability(component);
+     setComponents(prev =>
+        prev.map(c => (c.id === component.id ? updatedComponent : c))
+    );
+  };
+
   const handleOpenMaintenanceModal = (component: Component) => {
       setComponentForMaintenance(component);
       setIsMaintenanceModalOpen(true);
@@ -234,6 +255,54 @@ const App: React.FC = () => {
       setProjects(prev => prev.map(p => p.id === projectId ? updatedProject : p));
   };
 
+  const handleClearAll = () => {
+    if(window.confirm('Are you sure you want to delete ALL components? This cannot be undone.')) {
+        localStorageService.clearAllComponents();
+        setComponents([]);
+    }
+  };
+
+  const handleExport = () => {
+      const headers = ["name", "description", "category", "totalQuantity", "issuedTo", "isAvailable", "imageUrl", "lowStockThreshold", "links", "isUnderMaintenance", "maintenanceLog"];
+      const csvContent = [
+          headers.join(','),
+          ...components.map(c => {
+             const linksJson = JSON.stringify(c.links || []).replace(/"/g, '""');
+             const maintenanceJson = JSON.stringify(c.maintenanceLog || []).replace(/"/g, '""');
+             const issuedToJson = JSON.stringify(c.issuedTo || []).replace(/"/g, '""');
+
+             return [
+                 `"${c.name.replace(/"/g, '""')}"`,
+                 `"${c.description.replace(/"/g, '""')}"`,
+                 c.category,
+                 c.totalQuantity,
+                 `"${issuedToJson}"`,
+                 c.isAvailable,
+                 `"${c.imageUrl || ''}"`,
+                 c.lowStockThreshold || '',
+                 `"${linksJson}"`,
+                 c.isUnderMaintenance,
+                 `"${maintenanceJson}"`
+             ].join(',')
+          })
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "inventory.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+  
+  const handleImport = (importedComponents: Omit<Component, 'id' | 'createdAt'>[]) => {
+    const newComponents = localStorageService.addMultipleComponents(importedComponents);
+    setComponents(prev => [...newComponents, ...prev]);
+    setIsImportModalOpen(false);
+  };
+
 
   if (showSplashScreen) {
     return <SplashScreen onFinished={() => setShowSplashScreen(false)} />;
@@ -250,28 +319,73 @@ const App: React.FC = () => {
     />;
   }
 
-  // Admin Panel is rendered if isAdmin is true
+  // Admin Flow
   if (isAdmin) {
+    const renderAdminContent = () => {
+        if (adminViewMode === 'selection') {
+            return <AdminModeSelection onSelect={setAdminViewMode} onLogout={handleGoBack} />;
+        }
+        
+        if (adminViewMode === 'analytics') {
+            return (
+                <AdminPanel 
+                    onExit={handleGoBack} // Acts as exit for the whole admin session, or could trigger view change
+                    onLibraryUpdate={() => setImageLibrary(getMergedImageLibrary())}
+                    components={components}
+                    setComponents={setComponents}
+                    projects={projects}
+                    onUpdateProjectStatus={handleUpdateProjectStatus}
+                    imageLibrary={imageLibrary}
+                    isLightMode={isLightMode}
+                    onToggleLightMode={() => setIsLightMode(prev => !prev)}
+                    onOpenEditModal={handleOpenEditModal}
+                    onOpenMaintenanceModal={handleOpenMaintenanceModal}
+                    onToggleMaintenance={handleToggleMaintenance}
+                    onDeleteComponent={handleDeleteComponent}
+                    onBack={() => setAdminViewMode('selection')}
+                />
+            );
+        }
+
+        if (adminViewMode === 'control') {
+            return (
+                <AdminControlPanel 
+                    components={components}
+                    imageLibrary={imageLibrary}
+                    onLogout={handleGoBack}
+                    onBack={() => setAdminViewMode('selection')}
+                    onAddComponent={() => setIsAddModalOpen(true)}
+                    onOpenScanner={handleOpenScanner}
+                    onClearAll={handleClearAll}
+                    onOpenShareModal={() => setIsShareModalOpen(true)}
+                    onOpenImportModal={() => setIsImportModalOpen(true)}
+                    onExport={handleExport}
+                    isLightMode={isLightMode}
+                    onToggleLightMode={() => setIsLightMode(prev => !prev)}
+                    onOpenEditModal={handleOpenEditModal}
+                    onOpenIssueModal={handleOpenIssueModal}
+                    onReturnIssue={handleReturnIssue}
+                    onDelete={handleDeleteComponent}
+                    onToggleAvailability={handleToggleAvailability}
+                    onOpenMaintenanceModal={handleOpenMaintenanceModal}
+                />
+            );
+        }
+    };
+
     return (
       <>
-        <AdminPanel 
-            onExit={handleGoBack}
-            onLibraryUpdate={() => setImageLibrary(getMergedImageLibrary())}
-            components={components}
-            setComponents={setComponents}
-            projects={projects}
-            onUpdateProjectStatus={handleUpdateProjectStatus}
-            imageLibrary={imageLibrary}
-            isLightMode={isLightMode}
-            onToggleLightMode={() => setIsLightMode(prev => !prev)}
-            onOpenEditModal={handleOpenEditModal}
-            onOpenMaintenanceModal={handleOpenMaintenanceModal}
-            onToggleMaintenance={handleToggleMaintenance}
-            onDeleteComponent={handleDeleteComponent}
-        />
-        {/* Modals needed by Admin Panel */}
+        {renderAdminContent()}
+
+        {/* Shared Modals for Admin */}
+        {isAddModalOpen && <AddComponentModal onClose={() => setIsAddModalOpen(false)} onAddComponent={handleAddComponent} imageLibrary={imageLibrary} />}
         {isEditModalOpen && <EditComponentModal component={componentToEdit} onClose={() => setIsEditModalOpen(false)} onUpdateComponent={handleUpdateComponent} imageLibrary={imageLibrary} />}
         {isMaintenanceModalOpen && <MaintenanceModal component={componentForMaintenance} onClose={() => setIsMaintenanceModalOpen(false)} onToggleMaintenance={handleToggleMaintenance} onAddLog={handleAddMaintenanceLog} onDeleteLog={handleDeleteMaintenanceLog} />}
+        {isShareModalOpen && <ShareModal onClose={() => setIsShareModalOpen(false)} />}
+        {isImportModalOpen && <ImportCSVModal onClose={() => setIsImportModalOpen(false)} onImport={handleImport} />}
+        {isScannerModalOpen && <SmartScannerModal onClose={() => setIsScannerModalOpen(false)} onImageScanned={handleImageScanned} />}
+        {isScanResultModalOpen && scannedImageData && <AIComponentScanResultModal imageDataUrl={scannedImageData} onClose={() => { setIsScanResultModalOpen(false); setScannedImageData(null); }} onAddComponent={handleAddComponent} />}
+        {isIssueModalOpen && <IssueComponentModal component={componentToIssue} onClose={() => setIsIssueModalOpen(false)} onIssue={handleConfirmIssue} />}
       </>
     );
   }
