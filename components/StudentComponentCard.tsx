@@ -1,13 +1,13 @@
+
 import React from 'react';
 import { Component } from '../types.ts';
-import { MinusIcon, WarningIcon } from './Icons.tsx';
+import { WarningIcon } from './Icons.tsx';
 
 interface StudentComponentCardProps {
   component: Component;
-  onIssue: (component: Component) => void;
 }
 
-const StudentComponentCard: React.FC<StudentComponentCardProps> = ({ component, onIssue }) => {
+const StudentComponentCard: React.FC<StudentComponentCardProps> = ({ component }) => {
   const availableQuantity = component.totalQuantity - (component.issuedTo || []).reduce((acc, issue) => acc + (issue.quantity || 1), 0);
   const availabilityPercentage = component.totalQuantity > 0 ? (availableQuantity / component.totalQuantity) * 100 : 0;
   
@@ -16,7 +16,6 @@ const StudentComponentCard: React.FC<StudentComponentCardProps> = ({ component, 
   if (availabilityPercentage < 25) progressBarColor = 'bg-red-500';
 
   const isLowStock = component.lowStockThreshold != null && availableQuantity <= component.lowStockThreshold;
-  const isIssuable = component.isAvailable && !component.isUnderMaintenance && availableQuantity > 0;
 
   return (
     <div className="bg-slate-800/70 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden flex flex-col border border-slate-700 transition-all duration-300 hover:border-sky-500/50 hover:-translate-y-1">
@@ -31,7 +30,7 @@ const StudentComponentCard: React.FC<StudentComponentCardProps> = ({ component, 
           <h3 className="text-lg font-bold text-white mt-1">{component.name}</h3>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 mb-2">
           <div className="flex justify-between items-center text-sm text-slate-300">
             <span className="flex items-center gap-1.5">
               {isLowStock && <WarningIcon className="text-yellow-400" />}
@@ -46,14 +45,8 @@ const StudentComponentCard: React.FC<StudentComponentCardProps> = ({ component, 
             ></div>
           </div>
         </div>
-
-        <button
-          onClick={() => onIssue(component)}
-          disabled={!isIssuable}
-          className="mt-4 w-full flex items-center justify-center gap-1 text-sm bg-yellow-600 hover:bg-yellow-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-semibold py-2 px-3 rounded-lg transition duration-200"
-        >
-          <MinusIcon /> Issue
-        </button>
+        
+        {/* Issue button removed as per request */}
       </div>
     </div>
   );

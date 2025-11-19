@@ -1,10 +1,10 @@
+
 import React, { useState, useMemo } from 'react';
 import { Component, Category, Project } from '../types.ts';
 import { Logo } from './Logo.tsx';
 import { SunIcon, MoonIcon, SearchIcon, EmptyStateIcon, PlusIcon } from './Icons.tsx';
 import StudentComponentCard from './StudentComponentCard.tsx';
 import MyIssuedItemCard from './MyIssuedItemCard.tsx';
-import IssueComponentModal from './IssueComponentModal.tsx';
 import AddProjectModal from './AddProjectModal.tsx';
 import MyProjectCard from './MyProjectCard.tsx';
 
@@ -21,13 +21,11 @@ interface StudentPanelProps {
 }
 
 const StudentPanel: React.FC<StudentPanelProps> = ({
-  studentName, components, projects, onLogout, onIssueComponent, onReturnComponent, onAddProject, isLightMode, onToggleLightMode
+  studentName, components, projects, onLogout, onReturnComponent, onAddProject, isLightMode, onToggleLightMode
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
-  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isAddProjectModalOpen, setIsAddProjectModalOpen] = useState(false);
-  const [componentToIssue, setComponentToIssue] = useState<Component | null>(null);
 
   const myIssuedItems = useMemo(() => {
     const items: (Component & { issueId: string, issuedQuantity: number, specificIssuedDate: string })[] = [];
@@ -58,17 +56,6 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
       return component.isAvailable && !component.isUnderMaintenance && availableQty > 0 && matchesSearch && matchesCategory;
     });
   }, [components, searchQuery, categoryFilter]);
-
-  const handleOpenIssueModal = (component: Component) => {
-    setComponentToIssue(component);
-    setIsIssueModalOpen(true);
-  };
-
-  const handleConfirmIssue = (componentId: string, student: string, quantity: number) => {
-    onIssueComponent(componentId, student, quantity);
-    setIsIssueModalOpen(false);
-    setComponentToIssue(null);
-  };
   
   const handleAddProject = (projectData: Omit<Project, 'id' | 'submittedAt' | 'status'>) => {
       onAddProject(projectData);
@@ -186,7 +173,7 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
             {availableComponents.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {availableComponents.map(component => (
-                  <StudentComponentCard key={component.id} component={component} onIssue={handleOpenIssueModal} />
+                  <StudentComponentCard key={component.id} component={component} />
                 ))}
               </div>
             ) : (
@@ -200,15 +187,6 @@ const StudentPanel: React.FC<StudentPanelProps> = ({
         </section>
       </main>
 
-      {isIssueModalOpen && (
-        <IssueComponentModal
-          component={componentToIssue}
-          onClose={() => setIsIssueModalOpen(false)}
-          onIssue={handleConfirmIssue}
-          studentName={studentName}
-        />
-      )}
-      
       {isAddProjectModalOpen && (
         <AddProjectModal
             onClose={() => setIsAddProjectModalOpen(false)}
