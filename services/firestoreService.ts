@@ -13,9 +13,10 @@ import {
   DocumentSnapshot,
   Timestamp
 } from 'firebase/firestore';
-import { Component, IssueRecord } from '../types.ts';
+import { Component, IssueRecord, Project, ProjectStatus } from '../types.ts';
 
 const componentsCollectionRef = collection(db, 'components');
+const projectsCollectionRef = collection(db, 'projects');
 
 // Helper function to convert Firestore doc to a clean Component object
 const docToComponent = (doc: DocumentSnapshot): Component => {
@@ -45,8 +46,43 @@ const docToComponent = (doc: DocumentSnapshot): Component => {
         imageUrl: data.imageUrl,
         isAvailable: data.isAvailable,
         createdAt: createdAt,
+        lowStockThreshold: data.lowStockThreshold,
+        links: data.links || [],
+        isUnderMaintenance: data.isUnderMaintenance || false,
+        maintenanceLog: data.maintenanceLog || [],
     } as Component;
 }
+
+const docToProject = (doc: DocumentSnapshot): Project => {
+    const data = doc.data();
+    if (!data) throw new Error("Project document data is empty!");
+
+    const submittedAt = data.submittedAt instanceof Timestamp 
+        ? data.submittedAt.toDate().toISOString() 
+        : (data.submittedAt ? new Date(data.submittedAt).toISOString() : new Date().toISOString());
+
+    return {
+        id: doc.id,
+        submitterStudentName: data.submitterStudentName,
+        projectName: data.projectName,
+        projectType: data.projectType,
+        teamName: data.teamName,
+        teamEmail: data.teamEmail,
+        teamMembers: data.teamMembers,
+        mobileNumber: data.mobileNumber,
+        features: data.features,
+        description: data.description,
+        prototypeDrawingUrl: data.prototypeDrawingUrl,
+        requiredComponents: data.requiredComponents || [],
+        status: data.status,
+        submittedAt: submittedAt,
+        adminFeedback: data.adminFeedback,
+        timeline: data.timeline,
+        budget: data.budget,
+        techStack: data.techStack,
+    } as Project;
+}
+
 
 export const getComponents = async (): Promise<Component[]> => {
     const q = query(componentsCollectionRef, orderBy('createdAt', 'desc'));
@@ -58,19 +94,15 @@ export const addComponent = async (component: Omit<Component, 'id' | 'createdAt'
     const newComponentData = { ...component, createdAt: serverTimestamp() };
     const docRef = await addDoc(componentsCollectionRef, newComponentData);
     
-    // To fix the circular dependency error and improve performance,
-    // construct the component object on the client-side instead of re-fetching.
-    // The server timestamp will be available on the next full refresh.
     return {
       ...component,
       id: docRef.id,
-      createdAt: new Date().toISOString(), // Use client timestamp for immediate UI update
+      createdAt: new Date().toISOString(),
     };
 };
 
 export const updateComponent = async (component: Component): Promise<void> => {
     const componentDoc = doc(db, 'components', component.id);
-    // Exclude id and createdAt from the update payload to avoid overwriting them
     const { id, createdAt, ...componentData } = component;
     await updateDoc(componentDoc, componentData);
 };
@@ -98,7 +130,6 @@ export const toggleAvailability = async (component: Component): Promise<Componen
     return { ...component, isAvailable: newAvailability };
 }
 
-// FIX: Added quantity parameter to the function signature to match the IssueRecord type.
 export const issueComponent = async (id: string, studentName: string, quantity: number): Promise<Component> => {
     const componentDocRef = doc(db, 'components', id);
     
@@ -106,7 +137,6 @@ export const issueComponent = async (id: string, studentName: string, quantity: 
     if (!docSnap.exists()) throw new Error("Component not found");
     const component = docToComponent(docSnap);
 
-    // FIX: Added the 'quantity' property to the newIssue object to satisfy the IssueRecord interface.
     const newIssue: IssueRecord = {
         id: crypto.randomUUID(),
         studentName,
@@ -131,4 +161,86 @@ export const returnIssue = async (componentId: string, issueId: string): Promise
     await updateDoc(componentDocRef, { issuedTo: updatedIssuedTo });
 
     return { ...component, issuedTo: updatedIssuedTo };
+};
+
+// --- Project Functions ---
+
+export const getProjects = async (): Promise<Project[]> => {
+    const q = query(projectsCollectionRef, orderBy('submittedAt', 'desc'));
+    const data = await getDocs(q);
+    return data.docs.map(docToProject);
+};
+
+export const addProject = async (projectData: Omit<Project, 'id' | 'submittedAt' | 'status'>): Promise<Project> => {
+    const newProjectData = { 
+        ...projectData, 
+        submittedAt: serverTimestamp(),
+        status: ProjectStatus.PENDING,
+    };
+    const docRef = await addDoc(projectsCollectionRef, newProjectData);
+    
+    return {
+      ...projectData,
+      id: docRef.id,
+      submittedAt: new Date().toISOString(), // client timestamp for immediate UI update
+      status: ProjectStatus.PENDING,
+    };
+};
+
+export const updateProjectStatus = async (projectId: string, status: ProjectStatus, feedback?: string): Promise<Project> => {
+    const projectDocRef = doc(db, 'projects', projectId);
+    
+    const updateData: { status: ProjectStatus; adminFeedback?: string } = { status };
+    if (feedback !== undefined) {
+      updateData.adminFeedback = feedback;
+    }
+
+    await updateDoc(projectDocRef, updateData);
+
+    const docSnap = await getDoc(projectDocRef);
+    if (!docSnap.exists()) throw new Error("Project not found after update");
+    return docToProject(docSnap);
+};
+
+// --- Maintenance Functions ---
+export const toggleMaintenanceStatus = async (componentId: string): Promise<Component> => {
+    const componentDocRef = doc(db, 'components', componentId);
+    const docSnap = await getDoc(componentDocRef);
+    if (!docSnap.exists()) throw new Error("Component not found");
+    
+    const component = docToComponent(docSnap);
+    const newStatus = !component.isUnderMaintenance;
+    await updateDoc(componentDocRef, { isUnderMaintenance: newStatus });
+    
+    return { ...component, isUnderMaintenance: newStatus };
+};
+
+export const addMaintenanceLog = async (componentId: string, notes: string): Promise<Component> => {
+    const componentDocRef = doc(db, 'components', componentId);
+    const docSnap = await getDoc(componentDocRef);
+    if (!docSnap.exists()) throw new Error("Component not found");
+
+    const component = docToComponent(docSnap);
+    const newLog = {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        notes,
+    };
+    
+    const updatedLog = [newLog, ...(component.maintenanceLog || [])];
+    await updateDoc(componentDocRef, { maintenanceLog: updatedLog });
+
+    return { ...component, maintenanceLog: updatedLog };
+};
+
+export const deleteMaintenanceLog = async (componentId: string, logId: string): Promise<Component> => {
+    const componentDocRef = doc(db, 'components', componentId);
+    const docSnap = await getDoc(componentDocRef);
+    if (!docSnap.exists()) throw new Error("Component not found");
+
+    const component = docToComponent(docSnap);
+    const updatedLog = (component.maintenanceLog || []).filter(log => log.id !== logId);
+    await updateDoc(componentDocRef, { maintenanceLog: updatedLog });
+
+    return { ...component, maintenanceLog: updatedLog };
 };

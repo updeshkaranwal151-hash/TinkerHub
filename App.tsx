@@ -1,26 +1,27 @@
-
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Component, IssueRecord, Category, AISuggestions, Project, ProjectStatus } from './types.ts';
+import React, { useState, useEffect, useMemo } from 'react';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from './services/firebase.ts';
+import { Component, Project, ProjectStatus } from './types.ts';
 import AddComponentModal from './components/AddComponentModal.tsx';
 import EditComponentModal from './components/EditComponentModal.tsx';
 import IssueComponentModal from './components/IssueComponentModal.tsx';
 import ShareModal from './components/ShareModal.tsx';
-import PasswordProtection from './components/PasswordProtection.tsx';
-import * as localStorageService from './services/localStorageService.ts';
+import * as firestoreService from './services/firestoreService.ts';
 import AILabAssistantModal from './components/AILabAssistantModal.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
 import AdminModeSelection from './components/AdminModeSelection.tsx';
 import AdminControlPanel from './components/AdminControlPanel.tsx';
 import { imageLibrary as defaultImageLibrary, ImageData } from './components/imageLibrary.ts';
+import * as localStorageService from './services/localStorageService.ts'; // Keep for non-data services
 import ImportCSVModal from './components/ImportCSVModal.tsx';
 import MaintenanceModal from './components/MaintenanceModal.tsx';
 import LandingPage from './components/LandingPage.tsx';
 import SplashScreen from './components/SplashScreen.tsx';
 import SmartScannerModal from './components/SmartScannerModal.tsx';
 import AIComponentScanResultModal from './components/AIComponentScanResultModal.tsx';
-import StudentLogin from './components/StudentLogin.tsx';
 import StudentPanel from './components/StudentPanel.tsx';
 import { AIAssistantIcon } from './components/Icons.tsx';
+import Login from './components/Login.tsx';
 
 
 // Helper to merge default and custom image libraries
@@ -31,7 +32,6 @@ const getMergedImageLibrary = (): Record<string, ImageData[]> => {
   for (const category in customLibrary) {
     const customImages = customLibrary[category] || [];
     const defaultImages = mergedLibrary[category] || [];
-    // Combine and remove duplicates, giving preference to custom images
     const combined = [...customImages, ...defaultImages];
     mergedLibrary[category] = Array.from(new Map(combined.map(item => [item.url, item])).values());
   }
@@ -44,11 +44,8 @@ const App: React.FC = () => {
   const [showSplashScreen, setShowSplashScreen] = useState(true);
   const [showLandingPage, setShowLandingPage] = useState(true);
   
-  // Auth & Role State
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isStudentLoggedIn, setIsStudentLoggedIn] = useState(false);
-  const [currentStudentName, setCurrentStudentName] = useState('');
+  // --- New Firebase Auth State ---
+  const [authUser, setAuthUser] = useState<User | null | 'loading'>('loading');
   const [adminViewMode, setAdminViewMode] = useState<'selection' | 'analytics' | 'control'>('selection');
   
   // App State
@@ -78,14 +75,28 @@ const App: React.FC = () => {
     return localStorage.getItem('theme') === 'light';
   });
 
-  // Effect to set initial passwords if they don't exist
+  // --- Role derivation from Auth User ---
+  const isAdmin = useMemo(() => authUser && authUser !== 'loading' && authUser.email === 'admin@tinkerhub.com', [authUser]);
+  const isStudent = useMemo(() => authUser && authUser !== 'loading' && !isAdmin, [authUser]);
+  const currentStudentName = useMemo(() => {
+    if (isStudent && authUser && authUser.email) {
+      // Derive name from email, e.g., "jane.doe" from "jane.doe@example.com"
+      const emailName = authUser.email.split('@')[0];
+      return emailName.replace(/[\._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Capitalize words
+    }
+    return '';
+  }, [authUser, isStudent]);
+
+
+  // Listen to Firebase auth state changes
   useEffect(() => {
-    if (!localStorageService.getAdminPassword()) {
-      localStorageService.setAdminPassword('adminpass'); // Default admin password
-    }
-    if (!localStorageService.getUserPassword()) {
-      localStorageService.setUserPassword('userpass'); // Default user password
-    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      if (user) {
+        localStorageService.trackSuccessfulLogin();
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -103,47 +114,40 @@ const App: React.FC = () => {
   }, [isLightMode]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    const fetchData = async () => {
         setIsLoading(true);
         try {
-            const componentData = localStorageService.getComponents();
-            const projectData = localStorageService.getProjects();
+            const [componentData, projectData] = await Promise.all([
+                firestoreService.getComponents(),
+                firestoreService.getProjects()
+            ]);
             setComponents(componentData);
             setProjects(projectData);
-            setImageLibrary(getMergedImageLibrary()); // Ensure image library is up-to-date
+            setImageLibrary(getMergedImageLibrary());
         } catch (err) {
-            console.error("Error fetching data from local storage:", err);
+            console.error("Error fetching data from Firestore:", err);
+            alert("Could not connect to the database. Please check your internet connection and refresh.");
         } finally {
-            setTimeout(() => setIsLoading(false), 300);
+            setIsLoading(false);
         }
+    };
+
+    if (authUser && authUser !== 'loading') {
+        fetchData();
     } else {
-        // Clear data if not authenticated
         setComponents([]);
         setProjects([]);
-        setImageLibrary(getMergedImageLibrary()); // Reset to default + custom only
+        setImageLibrary(getMergedImageLibrary());
     }
-  }, [isAuthenticated]); // Only re-run when authentication status changes
-  
-  const handleAuthSuccess = () => {
-      setIsAuthenticated(true);
-  };
-  
-  const handleStudentLogin = (name: string) => {
-    setCurrentStudentName(name);
-    setIsStudentLoggedIn(true);
-    localStorageService.trackSuccessfulLogin();
-  };
-  
-  const handleStudentLogout = () => {
-    setIsStudentLoggedIn(false);
-    setCurrentStudentName('');
-  };
+}, [authUser]);
 
-  const handleGoBack = () => {
-      setIsAuthenticated(false);
-      setIsAdmin(false);
-      setAdminViewMode('selection');
-      handleStudentLogout();
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setAdminViewMode('selection'); // Reset admin view on logout
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
   };
 
   const handleOpenScanner = () => {
@@ -162,9 +166,14 @@ const App: React.FC = () => {
   };
 
 
-  const handleAddComponent = (newComponent: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>) => {
+  const handleAddComponent = async (newComponentData: Omit<Component, 'id' | 'createdAt' | 'isUnderMaintenance' | 'maintenanceLog'>) => {
     try {
-        const addedComponent = localStorageService.addComponent(newComponent);
+        const componentToAdd: Omit<Component, 'id' | 'createdAt'> = {
+            ...newComponentData,
+            isUnderMaintenance: false,
+            maintenanceLog: [],
+        };
+        const addedComponent = await firestoreService.addComponent(componentToAdd);
         setComponents(prev => [addedComponent, ...prev]);
         setIsAddModalOpen(false);
         setIsScanResultModalOpen(false);
@@ -174,9 +183,9 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteComponent = (id: string) => {
+  const handleDeleteComponent = async (id: string) => {
     if(window.confirm('Are you sure you want to delete this component? This action cannot be undone.')) {
-        localStorageService.deleteComponent(id);
+        await firestoreService.deleteComponent(id);
         setComponents(prev => prev.filter(c => c.id !== id));
     }
   };
@@ -186,8 +195,8 @@ const App: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleUpdateComponent = (updatedComponent: Component) => {
-    localStorageService.updateComponent(updatedComponent);
+  const handleUpdateComponent = async (updatedComponent: Component) => {
+    await firestoreService.updateComponent(updatedComponent);
     setComponents(prev =>
         prev.map(c => (c.id === updatedComponent.id ? updatedComponent : c))
     );
@@ -195,8 +204,8 @@ const App: React.FC = () => {
     setComponentToEdit(null);
   };
 
-  const handleConfirmIssue = (componentId: string, studentName: string, quantity: number) => {
-    const updatedComponent = localStorageService.issueComponent(componentId, studentName, quantity);
+  const handleConfirmIssue = async (componentId: string, studentName: string, quantity: number) => {
+    const updatedComponent = await firestoreService.issueComponent(componentId, studentName, quantity);
      setComponents(prev => 
         prev.map(c => 
             c.id === componentId ? updatedComponent : c
@@ -206,8 +215,8 @@ const App: React.FC = () => {
     setComponentToIssue(null);
   };
 
-  const handleReturnIssue = (componentId: string, issueId: string) => {
-     const updatedComponent = localStorageService.returnIssue(componentId, issueId);
+  const handleReturnIssue = async (componentId: string, issueId: string) => {
+     const updatedComponent = await firestoreService.returnIssue(componentId, issueId);
     setComponents(prev =>
         prev.map(c =>
             c.id === componentId ? updatedComponent : c
@@ -215,8 +224,8 @@ const App: React.FC = () => {
     );
   };
   
-  const handleToggleAvailability = (component: Component) => {
-    const updatedComponent = localStorageService.toggleAvailability(component);
+  const handleToggleAvailability = async (component: Component) => {
+    const updatedComponent = await firestoreService.toggleAvailability(component);
      setComponents(prev =>
         prev.map(c => (c.id === component.id ? updatedComponent : c))
     );
@@ -227,37 +236,37 @@ const App: React.FC = () => {
       setIsMaintenanceModalOpen(true);
   };
   
-  const handleToggleMaintenance = (componentId: string) => {
-      const updatedComponent = localStorageService.toggleMaintenanceStatus(componentId);
+  const handleToggleMaintenance = async (componentId: string) => {
+      const updatedComponent = await firestoreService.toggleMaintenanceStatus(componentId);
       setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
-      setComponentForMaintenance(updatedComponent);
+      setComponentForMaintenance(prev => (prev && prev.id === componentId ? updatedComponent : prev));
   };
   
-  const handleAddMaintenanceLog = (componentId: string, notes: string) => {
-      const updatedComponent = localStorageService.addMaintenanceLog(componentId, notes);
+  const handleAddMaintenanceLog = async (componentId: string, notes: string) => {
+      const updatedComponent = await firestoreService.addMaintenanceLog(componentId, notes);
       setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
-      setComponentForMaintenance(updatedComponent);
+      setComponentForMaintenance(prev => (prev && prev.id === componentId ? updatedComponent : prev));
   };
   
-  const handleDeleteMaintenanceLog = (componentId: string, logId: string) => {
-      const updatedComponent = localStorageService.deleteMaintenanceLog(componentId, logId);
+  const handleDeleteMaintenanceLog = async (componentId: string, logId: string) => {
+      const updatedComponent = await firestoreService.deleteMaintenanceLog(componentId, logId);
       setComponents(prev => prev.map(c => c.id === componentId ? updatedComponent : c));
-      setComponentForMaintenance(updatedComponent);
+      setComponentForMaintenance(prev => (prev && prev.id === componentId ? updatedComponent : prev));
   };
   
-  const handleAddProject = (projectData: Omit<Project, 'id' | 'submittedAt' | 'status'>) => {
-      const newProject = localStorageService.addProject(projectData);
+  const handleAddProject = async (projectData: Omit<Project, 'id' | 'submittedAt' | 'status'>) => {
+      const newProject = await firestoreService.addProject(projectData);
       setProjects(prev => [newProject, ...prev]);
   };
   
-  const handleUpdateProjectStatus = (projectId: string, status: ProjectStatus, feedback?: string) => {
-      const updatedProject = localStorageService.updateProjectStatus(projectId, status, feedback);
+  const handleUpdateProjectStatus = async (projectId: string, status: ProjectStatus, feedback?: string) => {
+      const updatedProject = await firestoreService.updateProjectStatus(projectId, status, feedback);
       setProjects(prev => prev.map(p => p.id === projectId ? updatedProject : p));
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if(window.confirm('Are you sure you want to delete ALL components? This cannot be undone.')) {
-        localStorageService.clearAllComponents();
+        await firestoreService.clearAllComponents();
         setComponents([]);
     }
   };
@@ -297,39 +306,42 @@ const App: React.FC = () => {
       document.body.removeChild(link);
   };
   
-  const handleImport = (importedComponents: Omit<Component, 'id' | 'createdAt'>[]) => {
-    const newComponents = localStorageService.addMultipleComponents(importedComponents);
-    setComponents(prev => [...newComponents, ...prev]);
-    setIsImportModalOpen(false);
+  const handleImport = async (importedComponents: Omit<Component, 'id' | 'createdAt'>[]) => {
+    try {
+        const addPromises = importedComponents.map(comp => firestoreService.addComponent(comp));
+        const newComponents = await Promise.all(addPromises);
+        setComponents(prev => [...newComponents, ...prev]);
+        setIsImportModalOpen(false);
+    } catch (error) {
+        alert("Error importing components. Please check the console for details.");
+        console.error("Bulk import error:", error);
+    }
   };
 
 
-  if (showSplashScreen) {
+  if (showSplashScreen || authUser === 'loading') {
     return <SplashScreen onFinished={() => setShowSplashScreen(false)} />;
   }
 
-  if (showLandingPage) {
+  if (showLandingPage && (!authUser || authUser === 'loading')) {
     return <LandingPage onGetStarted={() => setShowLandingPage(false)} />;
   }
-
-  if (!isAuthenticated) {
-    return <PasswordProtection 
-        onUserLogin={handleAuthSuccess}
-        onAdminSuccess={() => { setIsAuthenticated(true); setIsAdmin(true); localStorageService.trackSuccessfulLogin(); }}
-    />;
+  
+  if (!authUser) {
+    return <Login />;
   }
 
   // Admin Flow
   if (isAdmin) {
     const renderAdminContent = () => {
         if (adminViewMode === 'selection') {
-            return <AdminModeSelection onSelect={setAdminViewMode} onLogout={handleGoBack} />;
+            return <AdminModeSelection onSelect={setAdminViewMode} onLogout={handleLogout} />;
         }
         
         if (adminViewMode === 'analytics') {
             return (
                 <AdminPanel 
-                    onExit={handleGoBack} // Acts as exit for the whole admin session, or could trigger view change
+                    onExit={handleLogout}
                     onLibraryUpdate={() => setImageLibrary(getMergedImageLibrary())}
                     components={components}
                     setComponents={setComponents}
@@ -352,7 +364,7 @@ const App: React.FC = () => {
                 <AdminControlPanel 
                     components={components}
                     imageLibrary={imageLibrary}
-                    onLogout={handleGoBack}
+                    onLogout={handleLogout}
                     onBack={() => setAdminViewMode('selection')}
                     onAddComponent={() => setIsAddModalOpen(true)}
                     onOpenScanner={handleOpenScanner}
@@ -376,8 +388,6 @@ const App: React.FC = () => {
     return (
       <>
         {renderAdminContent()}
-
-        {/* Shared Modals for Admin */}
         {isAddModalOpen && <AddComponentModal onClose={() => setIsAddModalOpen(false)} onAddComponent={handleAddComponent} imageLibrary={imageLibrary} />}
         {isEditModalOpen && <EditComponentModal component={componentToEdit} onClose={() => setIsEditModalOpen(false)} onUpdateComponent={handleUpdateComponent} imageLibrary={imageLibrary} />}
         {isMaintenanceModalOpen && <MaintenanceModal component={componentForMaintenance} onClose={() => setIsMaintenanceModalOpen(false)} onToggleMaintenance={handleToggleMaintenance} onAddLog={handleAddMaintenanceLog} onDeleteLog={handleDeleteMaintenanceLog} />}
@@ -389,42 +399,41 @@ const App: React.FC = () => {
       </>
     );
   }
-
-  // Student Flow
-  if (!isStudentLoggedIn) {
-      return <StudentLogin onStudentLogin={handleStudentLogin} onBack={handleGoBack} />;
-  }
   
-  return (
-    <>
-      <StudentPanel
-          studentName={currentStudentName}
-          components={components}
-          projects={projects}
-          onLogout={handleStudentLogout}
-          onIssueComponent={handleConfirmIssue}
-          onReturnComponent={handleReturnIssue}
-          onAddProject={handleAddProject}
-          isLightMode={isLightMode}
-          onToggleLightMode={() => setIsLightMode(prev => !prev)}
-      />
-
-      {/* Global Modals can be placed here, e.g., AI Assistant */}
-      {isAssistantModalOpen && (
-        <AILabAssistantModal 
-          onClose={() => setIsAssistantModalOpen(false)}
-          components={components}
+  // Student Flow
+  if (isStudent) {
+    return (
+      <>
+        <StudentPanel
+            studentName={currentStudentName}
+            components={components}
+            projects={projects}
+            onLogout={handleLogout}
+            onIssueComponent={handleConfirmIssue}
+            onReturnComponent={handleReturnIssue}
+            onAddProject={handleAddProject}
+            isLightMode={isLightMode}
+            onToggleLightMode={() => setIsLightMode(prev => !prev)}
         />
-      )}
-       <button
-        onClick={() => setIsAssistantModalOpen(true)}
-        className="fixed bottom-4 right-4 bg-gradient-to-br from-sky-500 to-indigo-600 text-white p-4 rounded-full shadow-2xl shadow-indigo-600/50 hover:scale-110 transform transition-transform duration-300 z-30 animate-pulse hover:animate-none"
-        aria-label="Open AI Lab Assistant"
-      >
-        <AIAssistantIcon />
-      </button>
-    </>
-  );
+        {isAssistantModalOpen && (
+          <AILabAssistantModal 
+            onClose={() => setIsAssistantModalOpen(false)}
+            components={components}
+          />
+        )}
+         <button
+          onClick={() => setIsAssistantModalOpen(true)}
+          className="fixed bottom-4 right-4 bg-gradient-to-br from-sky-500 to-indigo-600 text-white p-4 rounded-full shadow-2xl shadow-indigo-600/50 hover:scale-110 transform transition-transform duration-300 z-30 animate-pulse hover:animate-none"
+          aria-label="Open AI Lab Assistant"
+        >
+          <AIAssistantIcon />
+        </button>
+      </>
+    );
+  }
+
+  // Fallback for unknown user roles, though should not be reached with current logic
+  return <Login />;
 };
 
 export default App;
