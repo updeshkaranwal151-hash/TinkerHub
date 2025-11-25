@@ -102,3 +102,21 @@ export interface Project {
   budget?: string;
   techStack?: string;
 }
+
+// --- New Multi-Tenant & Auth Types ---
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  role: 'admin' | 'student';
+  schoolId: string | null; // Admins are tied to one school, students can select one
+  schoolName?: string; // Denormalized for convenience
+}
+
+export interface License {
+  id: string; // The license key/token itself
+  schoolId: string;
+  schoolName: string;
+  isClaimed: boolean;
+  claimedByUid?: string;
+}
