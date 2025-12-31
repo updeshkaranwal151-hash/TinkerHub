@@ -1,9 +1,8 @@
-
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Logo } from './Logo.tsx';
 import { DatabaseIcon, CloudIcon, AIAssistantIcon, ProjectIcon, ImportIcon, MoonIcon, UserCircleIcon, StarIcon } from './Icons.tsx';
-
+import PrivacyPolicyModal from './PrivacyPolicyModal.tsx';
+import TermsOfServiceModal from './TermsOfServiceModal.tsx';
 
 interface LandingPageProps {
     onGetStarted: () => void;
@@ -22,6 +21,8 @@ const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; children: Re
 
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
     const sectionsRef = useRef<Array<HTMLElement | null>>([]);
+    const [showPrivacy, setShowPrivacy] = useState(false);
+    const [showTerms, setShowTerms] = useState(false);
     
     useEffect(() => {
         const observer = new IntersectionObserver((entries) => {
@@ -217,14 +218,21 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </main>
 
             <footer className="bg-slate-900/50 border-t border-slate-700/50">
-                <div ref={el => { sectionsRef.current[16] = el; }} className="fade-in-section container mx-auto px-6 py-8 text-center text-slate-500">
+                <div ref={el => { sectionsRef.current[16] = el; }} className="fade-in-section container mx-auto px-6 py-8 text-center">
                     <div className="flex justify-center items-center gap-3 mb-4">
                         <Logo className="h-8 w-8" />
                         <p className="font-semibold text-slate-300">TinkerHub</p>
                     </div>
-                    <p className="text-sm">Crafted with ❤️ by Apoorv Karanwal for the TinkerHub community.</p>
+                    <p className="text-slate-500 text-sm">Crafted with ❤️ by Apoorv Karanwal for the TinkerHub community.</p>
+                    <div className="mt-4 flex justify-center gap-6 text-xs text-slate-500">
+                        <button onClick={() => setShowPrivacy(true)} className="hover:text-sky-400 transition-colors">Privacy Policy</button>
+                        <button onClick={() => setShowTerms(true)} className="hover:text-sky-400 transition-colors">Terms of Service</button>
+                    </div>
                 </div>
             </footer>
+
+            {showPrivacy && <PrivacyPolicyModal onClose={() => setShowPrivacy(false)} />}
+            {showTerms && <TermsOfServiceModal onClose={() => setShowTerms(false)} />}
         </div>
     );
 };
