@@ -1,6 +1,6 @@
 {
-  "name": "TinkerHub - ATL Lab Inventory Manager",
-  "description": "A modern web application to manage and track electronic and mechanical components in an ATL (Atal Tinkering Labs) inventory. Teachers can manage components, and students can view and issue/return items.",
+  "name": "Tinker Hub App",
+  "description": "A modern web application to manage and track electronic and mechanical components in an ATL (Atal Tinkering Labs) inventory.",
   "requestFramePermissions": [
     "camera"
   ]
